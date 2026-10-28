@@ -34,6 +34,7 @@ h2 { margin-top: 2.2rem; }
 #toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 28px 16px; border-right: 1px solid var(--line); }
 #toc .brand { font-weight: 700; font-size: 1.2rem; text-decoration: none; color: var(--fg); display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
 #toc .brand img { width: 30px; height: 30px; }
+.hero img, #toc .brand img { border-radius: 22%; box-shadow: 0 0 0 1px var(--line); }
 
 #toc ol { list-style: none; padding: 0; margin: 0; counter-reset: step; }
 #toc li a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--dim); text-decoration: none; font-size: 15px; }

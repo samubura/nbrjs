@@ -1,8 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="NbrJS">
-  <rect width="64" height="64" fill="#8cc84b"/>
-  <path d="M19 17 8 8M19 17 31 7M19 17 7 27M19 17 32 23M31 7 43 12M32 23 43 12" stroke="#161616" stroke-width="2" stroke-linecap="round" opacity=".75"/>
-  <circle cx="19" cy="17" r="5.2" fill="#161616"/>
-  <g fill="#161616" opacity=".85"><circle cx="8" cy="8" r="3"/><circle cx="31" cy="7" r="3"/><circle cx="7" cy="27" r="3"/><circle cx="32" cy="23" r="3"/></g>
-  <circle cx="43" cy="12" r="2.4" fill="#161616" opacity=".6"/>
-  <text x="59.5" y="58.5" text-anchor="end" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="700" font-size="30" letter-spacing="-.5" fill="#161616">JS</text>
+  <rect width="64" height="64" rx="14" fill="#161616"/>
+  <g stroke="#3c873a" stroke-width="2.2" stroke-linecap="round">
+    <path d="M23 19 10 9M23 19 37 8M23 19 9 29M23 19 38 26M37 8 52 13M38 26 52 13"/>
+  </g>
+  <circle cx="23" cy="19" r="6" fill="#8cc84b"/>
+  <g fill="#68a063">
+    <circle cx="10" cy="9" r="3.6"/>
+    <circle cx="37" cy="8" r="3.6"/>
+    <circle cx="9" cy="29" r="3.6"/>
+    <circle cx="38" cy="26" r="3.6"/>
+  </g>
+  <circle cx="52" cy="13" r="2.8" fill="#3c873a"/>
+  <text x="5" y="56" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="700" font-size="16" fill="#8cc84b">nbr</text>
+  <rect x="35" y="36" width="24" height="22" fill="#8cc84b"/>
+  <text x="57.5" y="55.5" text-anchor="end" font-family="Arial, Helvetica, Liberation Sans, sans-serif" font-weight="700" font-size="14.5" fill="#161616">JS</text>
 </svg>
