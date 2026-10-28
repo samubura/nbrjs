@@ -4,7 +4,12 @@
 // Playground.mount(el, {program, config: object | code, tabs, presets, height}). Browser only.
 (function () {
   var A = nbrjs, S = nbrjsSim;
-  var OPS = ['xc', 'retsend', 'nbr', 'rep', 'share', 'branch', 'align', 'id', 'sense', 'nbrSense'];
+  var OPS = ['xc', 'retsend', 'nbr', 'rep', 'share', 'branch', 'align', 'aggregate', 'id', 'sense', 'nbrSense'];
+  // The standard library (src/lib.js), when the page loads it: its blocks are globals too.
+  var LIB = window.nbrjsLib || {};
+  var usesLib = function (code) {
+    return Object.keys(LIB).some(function (k) { return k !== 'globals' && new RegExp('\\b' + k + '\\(').test(code); });
+  };
   // Stand-ins so a whole device file pastes in unchanged: start() hands us the program,
   // the board's pins and setWatch do nothing (inputs are simulated through config.js sensors).
   var PIN = { read: function () { return false; }, write: function () {} };
@@ -56,8 +61,10 @@
     var started = null;
     var start = function (p) { started = p; return { round: function () {}, stop: function () {} }; };
     var api = Object.assign({}, A, { start: start, globals: function () { return api; } });
-    var env = Object.assign({ start: start, require: function () { return api; } }, HW);
+    var lib = Object.assign({}, LIB, { globals: function () { return lib; } });
+    var env = Object.assign({ start: start, require: function (m) { return m === 'nbrjs/lib' ? lib : api; } }, HW);
     OPS.forEach(function (k) { env[k] = A[k]; });
+    for (var k in LIB) if (k !== 'globals') env[k] = LIB[k];
     var names = Object.keys(env);
     var f = new Function(names.join(','), code + '\n;return typeof program === "function" ? program : undefined;');
     var p;
@@ -107,7 +114,9 @@
   var deviceFile = function (program, target, wifi) {
     var st = START[target || 'ble'].join('\n');
     if (wifi) st = st.replace("'SSID'", JSON.stringify(wifi.ssid)).replace("'PASSWORD'", JSON.stringify(wifi.password));
-    return (/globals\(\)/.test(program) ? '' : "require('nbrjs').globals();\n") + program.trim() +
+    var head = /globals\(\)/.test(program) ? '' : "require('nbrjs').globals();\n" +
+      (usesLib(program) ? "require('nbrjs/lib').globals();\n" : '');
+    return head + program.trim() +
       (/\bstart\(/.test(program) ? '' : '\n\n' + st) + '\n';
   };
   var SRC = (document.querySelector('script[src$="core.js"]') || {}).src || new URL('../src/core.js', location.href).href;
