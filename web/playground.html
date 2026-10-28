@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NbrJS Playground</title>
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>Playground</h1>
+<p>Due file, come in un progetto vero: <b>program.js</b> è il programma aggregato, lo stesso codice che gira sul dispositivo;
+<b>config.js</b> dice dove gira (qui <code>target: 'sim'</code>, con nodi, layout e sensori simulati). Entrambi si rieseguono a ogni modifica,
+e <b>Espruino ↗</b> genera il file per Puck.js / ESP32 con <code>target: 'ble'</code>.</p>
+<p>Operatori: <code>xc</code>, <code>retsend</code>, <code>nbr</code>, <code>rep</code>, <code>share</code>, <code>branch</code>, <code>align</code>,
+<code>mid</code>, <code>sense</code> (<code>source</code>, <code>obstacle</code>, <code>x</code>, <code>y</code> e quelli di config.js), <code>nbrSense('range')</code>.
+Campi: <code>.self</code>, <code>.map</code>, <code>.zip</code>, <code>.reduce</code>, <code>.min</code>, <code>.max</code>, <code>.sum</code>.</p>
+<div id="pg"></div>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="playground.js"></script>
+<script src="presets.js"></script>
+<script>Playground.mount(document.getElementById('pg'), { presets: PRESETS, tabs: true, height: 480 });</script>
+<script src="site.js"></script>
