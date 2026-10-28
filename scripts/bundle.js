@@ -10,10 +10,11 @@ var strip = function (src) { return src.replace(/^\s*\/\/.*\n/gm, ''); };
 var terser = null;
 try { terser = require('terser'); } catch (e) { /* comments-only stripping */ }
 
-// Espruino-safe output: no arrow conversion or newer syntax than the source uses.
+// Espruino-safe output: ES5, and no inlining (it leaves `var`s after a `return`,
+// relying on hoisting that Espruino does not do).
 var minify = function (src) {
   if (!terser) return Promise.resolve(strip(src));
-  return terser.minify(src, { ecma: 5, compress: { passes: 2, keep_fargs: true }, mangle: true, format: { comments: false } })
+  return terser.minify(src, { ecma: 5, compress: { passes: 2, keep_fargs: true, inline: false }, mangle: true, format: { comments: false } })
     .then(function (r) { return r.code; });
 };
 var module = function (id) { return minify(fs.readFileSync(path.join(root, mods[id]), 'utf8')); };

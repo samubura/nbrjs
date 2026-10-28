@@ -62,22 +62,22 @@
   // Evaluates fn in a nested alignment scope: only neighbours that entered the
   // same scope stay aligned. The scope marker is broadcast to tell them so.
   function scoped(p, fn) {
-    var c = ctx, path = c.path, count = c.count, dom = c.dom;
-    c.msg[p] = 1;
-    c.dom = dom.filter(function (j) { return p in c.inbox[j]; });
+    var c = ctx, path = c.path, count = c.count, dom = c.dom, k = c.k(p);
+    c.msg[k] = 1;
+    c.dom = dom.filter(function (j) { return k in c.inbox[j]; });
     c.path = p;
     c.count = 0;
-    var r = fn();
-    c.path = path;
-    c.count = count;
-    c.dom = dom;
-    return r;
+    try { return fn(); } finally {
+      c.path = path;
+      c.count = count;
+      c.dom = dom;
+    }
   }
 
   function xc(init, fn) {
-    var c = ctx, p = next('x'), o = {};
+    var c = ctx, p = next('x'), pk = c.k(p), o = {};
     for (var i = 0; i < c.dom.length; i++) {
-      var j = c.dom[i], m = c.inbox[j][p];
+      var j = c.dom[i], m = c.inbox[j][pk];
       if (m) o[j] = m[1] && c.key in m[1] ? m[1][c.key] : m[0];
     }
     o[c.key] = p in c.prev ? c.prev[p] : init;
@@ -87,7 +87,7 @@
     var ov = null;
     for (var k in s.o) if (k !== c.key && s.o[k] !== s.d) { ov = ov || {}; ov[k] = s.o[k]; }
     c.state[p] = s.self;
-    c.msg[p] = ov ? [s.d, ov] : [s.d];
+    c.msg[pk] = ov ? [s.d, ov] : [s.d];
     return ret;
   }
 
@@ -106,11 +106,13 @@
     var c = ctx, p = next('r');
     return (c.state[p] = fn(p in c.prev ? c.prev[p] : init));
   };
+  // The else branch is optional (undefined there).
   exports.branch = function (cond, th, el) {
-    return scoped(next('b') + (cond ? '.1' : '.0'), cond ? th : el);
+    return scoped(next('b') + (cond ? '.1' : '.0'), cond ? th : el || function () {});
   };
+  // Counted like the other operators: the same key twice in a scope is two distinct scopes.
   exports.align = function (key, fn) {
-    return scoped(sub('a:' + key), fn);
+    return scoped(next('a') + ':' + key, fn);
   };
   exports.id = function () { return ctx.id; };
   exports.sense = function (name) { return ctx.sensors[name]; };
@@ -136,9 +138,19 @@
     return exports;
   };
 
+  // 16-bit hash of a path: compact message keys for tight radios (device(id, true), nbrjs/ble).
+  // ponytail: collisions among one program's few paths are unlikely; check them in the sim if it grows.
+  exports.hash = function (p) {
+    var h = 7;
+    for (var i = 0; i < p.length; i++) h = (h * 31 + p.charCodeAt(i)) % 65521;
+    return String(h);
+  };
+  var plain = function (p) { return p; };
+
   // inbox: {neighbourId: message}; returns {value, message} to broadcast.
-  exports.device = function (id) {
-    var state = {};
+  // hashed: message keys are hash(path) instead of readable paths.
+  exports.device = function (id, hashed) {
+    var state = {}, k = hashed ? exports.hash : plain;
     return {
       id: id,
       round: function (program, inbox, sensors, nbrSensors) {
@@ -146,7 +158,7 @@
         ctx = {
           id: id, key: String(id), inbox: inbox, dom: Object.keys(inbox),
           sensors: sensors || {}, nbrSensors: nbrSensors || {},
-          prev: state, state: {}, msg: {}, path: '', count: 0
+          prev: state, state: {}, msg: {}, path: '', count: 0, k: k
         };
         var value = program();
         state = ctx.state;
@@ -169,7 +181,8 @@
     return o;
   }
   exports.encode = function (msg) {
-    return JSON.stringify(mark(msg)).split('"~inf~"').join('1e999').split('"~-inf~"').join('-1e999');
+    // Not split/join: on Espruino 2v29 splitting a string shorter than the separator gives [].
+    return JSON.stringify(mark(msg)).replace(/"~inf~"/g, '1e999').replace(/"~-inf~"/g, '-1e999');
   };
   exports.decode = function (str) { return JSON.parse(str); };
 })(typeof exports === 'undefined' ? (this.nbrjs = {}) : exports);

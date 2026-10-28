@@ -81,6 +81,38 @@ var h = A.start(() => nbr(1).sum(), { target: 'sim', layout: 'line', nodes: 3, p
 h.round(); h.round(); h.stop();
 check('start() runs on the sim target', got, { 0: 1, 1: 2, 2: 1 });
 
+check('align: the same key twice is two scopes', run(line(1), function () {
+  return [A.align('k', function () { return rep(0, function (x) { return x + 1; }); }),
+    A.align('k', function () { return rep(100, function (x) { return x + 1; }); })];
+}, 3)[0], [3, 103]);
+check('branch without else', run(line(2), function () {
+  return branch(id() === '0', function () { return nbr(1).sum(); });
+}, 2), { 0: 0, 1: undefined });
+
+// Hashed message keys (BLE) compute the same as readable paths.
+var hashedNet = line(5);
+for (var hi in hashedNet.devices) hashedNet.devices[hi] = A.device(hi, true);
+var grad = function () { return branch(sense('obstacle'), function () { return -1; }, function () {
+  return share(Infinity, function (d) { return sense('source') ? 0 : d.min() + 1; }); }); };
+var srcs = { 0: { source: true } };
+check('hashed keys give the same results', run(hashedNet, grad, 6, srcs), run(line(5), grad, 6, srcs));
+
+// Binary BLE format: round trip, and it is small.
+var ble = require('nbrjs/ble');
+var rich = {};
+rich[A.hash('b0.1')] = 1;
+rich[A.hash('b0.1/x0')] = [Infinity, { '00aa': 3, 'beef': -2.5 }];
+rich[A.hash('x1')] = [NaN];
+rich[A.hash('x2')] = [null];
+rich[A.hash('x3')] = [-100000];
+rich[A.hash('x4')] = ['hi'];
+rich[A.hash('x5')] = [[1, true]];
+var back = ble.unpack(ble.pack(rich));
+check('ble binary format round-trips', [A.encode(back), isNaN(back[A.hash('x1')][0])], [A.encode(rich), true]);
+var hop = {};
+hop[A.hash('x0')] = [7];
+check('ble message sizes', [ble.pack(hop).length, ble.pack(rich).length], [3, 49]);
+
 // BLE transport against a fake NRF (no radio here): hears a neighbour, advertises a compact message.
 var adv = null, onScan = null;
 NRF = {
@@ -93,11 +125,14 @@ var bytes = function (s) { var b = []; for (var i = 0; i < s.length; i++) b.push
 var link = A.start(function () {
   return nbr(id()).reduce(function (acc, v) { return acc + v; }, '');
 }, { target: 'ble', period: 1e6 });
-onScan({ id: 'aa:bb:cc:dd:00:02 public', rssi: -50, manufacturer: 0x0590, manufacturerData: bytes('N' + A.encode({ x0: ['0002'] })) });
+var m2 = {};
+m2[A.hash('x0')] = ['0002'];
+onScan({ id: 'aa:bb:cc:dd:00:02 public', rssi: -50, manufacturer: 0x0590, manufacturerData: bytes('N' + ble.pack(m2)) });
 onScan({ id: 'aa:bb:cc:dd:00:03 public', rssi: -50, manufacturer: 0x004c, manufacturerData: bytes('Nxx') });
 var r = link.round();
 link.stop();
-check('ble hears neighbours and advertises compactly', [link.id, r.value, adv.manufacturerData], ['0001', '0002', 'N{"x0":["0001"]}']);
+check('ble hears neighbours and advertises compactly', [link.id, r.value, ble.unpack(adv.manufacturerData.slice(1))[A.hash('x0')], adv.manufacturerData.length],
+  ['0001', '0002', ['0001'], 1 + 2 + 2 + 6]);
 
 // UDP over WiFi against a fake socket: hears a neighbour, ignores itself, broadcasts its message.
 var sent = null, onMsg = null;
