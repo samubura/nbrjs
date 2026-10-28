@@ -6,7 +6,7 @@
   var NUS = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';     // Nordic UART: Espruino's console over BLE
   var RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';      // we write here
   var TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';      // the board notifies here
-  var FILES = { 'nbrjs': 'core.js', 'nbrjs/ble': 'ble.js', 'nbrjs/udp': 'udp.js', 'nbrjs/host': 'host.js' };
+  var FILES = { 'nbrjs': 'core.js', 'nbrjs/ble': 'ble.js', 'nbrjs/udp': 'udp.js', 'nbrjs/host': 'host.js', 'nbrjs/lib': 'lib.js' };
   var SRC = (document.querySelector('script[src$="core.js"]') || {}).src || new URL('../src/core.js', location).href;
   var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
 

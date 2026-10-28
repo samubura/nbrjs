@@ -89,6 +89,37 @@ check('branch without else', run(line(2), function () {
   return branch(id() === '0', function () { return nbr(1).sum(); });
 }, 2), { 0: 0, 1: undefined });
 
+var cat = function (acc, v) { return acc + v; };
+var fa = A.aggregate('fa', function () { return nbr('A').reduce(cat, ''); });
+var fb = A.aggregate('fb', function () { return nbr('B').reduce(cat, ''); });
+check('aggregate: different functions never align', run(line(3), function () {
+  return (id() === '1' ? fb : fa)();
+}, 2), { 0: '', 1: '', 2: '' });
+// What the alignment transform emits for: if (id() === '1') nbr('A'); return nbr('B').reduce(cat, '');
+check('enterIf/exit: an operator inside an if does not shift the ones after it', run(line(3), function () {
+  if (A.enterIf(id() === '1')) { try { nbr('A'); } finally { A.exit(); } } else { try { } finally { A.exit(); } }
+  return nbr('B').reduce(cat, '');
+}, 2), { 0: 'B', 1: 'BB', 2: 'B' });
+
+// Standard library.
+var L = require('nbrjs/lib');
+var src0 = { 0: { source: true } };
+check('lib: hopsTo, distanceTo, broadcast', run(line(5), function () {
+  var s = sense('source');
+  return [L.hopsTo(s), L.distanceTo(s), L.broadcast(s, 'hi'), L.broadcast(false, 'x')];
+}, 8, src0), { 0: [0, 0, 'hi', null], 1: [1, 1, 'hi', null], 2: [2, 2, 'hi', null], 3: [3, 3, 'hi', null], 4: [4, 4, 'hi', null] });
+check('lib: collectSum counts the devices at the source', run(line(5), function () {
+  return L.collectSum(L.hopsTo(sense('source')), 1);
+}, 12, src0)[0], 5);
+check('lib: networkMax/Min, neighbourCount, rounds, countdown', run(line(4), function () {
+  return [L.networkMax(+id()), L.networkMin(+id()), L.neighbourCount(), L.rounds(), L.countdown(3)];
+}, 5)[0], [3, 0, 1, 5, 0]);
+var leaders = run(line(9), function () { return L.isLeader(2.5); }, 12);
+var lead = Object.keys(leaders).filter(function (k) { return leaders[k]; }).map(Number);
+check('lib: isLeader picks spread-out leaders', lead.length > 0 && lead.every(function (a) {
+  return lead.every(function (b) { return a === b || Math.abs(a - b) > 1; }); // never two neighbouring leaders
+}), true);
+
 // Hashed message keys (BLE) compute the same as readable paths.
 var hashedNet = line(5);
 for (var hi in hashedNet.devices) hashedNet.devices[hi] = A.device(hi, true);

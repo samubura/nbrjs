@@ -55,23 +55,35 @@
   function sub(token) {
     return ctx.path ? ctx.path + '/' + token : token;
   }
+  function tok(kind) {
+    return kind + ctx.count++;
+  }
   function next(kind) {
-    return sub(kind + ctx.count++);
+    return sub(tok(kind));
   }
 
-  // Evaluates fn in a nested alignment scope: only neighbours that entered the
-  // same scope stay aligned. The scope marker is broadcast to tell them so.
-  function scoped(p, fn) {
-    var c = ctx, path = c.path, count = c.count, dom = c.dom, k = c.k(p);
-    c.msg[k] = 1;
-    c.dom = dom.filter(function (j) { return k in c.inbox[j]; });
+  // Nested alignment scopes. Operators inside only align with neighbours that entered the
+  // same scope. With a marker (branch, align) the scope is also broadcast, and neighbours
+  // that did not enter it leave the domain of every reduction inside.
+  function enter(token, mark) {
+    var c = ctx, p = sub(token), k = c.k(p);
+    c.stack.push([c.path, c.count, c.dom]);
+    if (mark) {
+      c.msg[k] = 1;
+      c.dom = c.dom.filter(function (j) { return k in c.inbox[j]; });
+    }
     c.path = p;
     c.count = 0;
-    try { return fn(); } finally {
-      c.path = path;
-      c.count = count;
-      c.dom = dom;
-    }
+  }
+  function exit() {
+    var c = ctx, s = c.stack.pop();
+    c.path = s[0];
+    c.count = s[1];
+    c.dom = s[2];
+  }
+  function scoped(token, mark, fn) {
+    enter(token, mark);
+    try { return fn(); } finally { exit(); }
   }
 
   function xc(init, fn) {
@@ -108,12 +120,27 @@
   };
   // The else branch is optional (undefined there).
   exports.branch = function (cond, th, el) {
-    return scoped(next('b') + (cond ? '.1' : '.0'), cond ? th : el || function () {});
+    return scoped(tok('b') + (cond ? '.1' : '.0'), true, cond ? th : el || function () {});
   };
   // Counted like the other operators: the same key twice in a scope is two distinct scopes.
   exports.align = function (key, fn) {
-    return scoped(next('a') + ':' + key, fn);
+    return scoped(tok('a') + ':' + key, true, fn);
   };
+  // Aligns by function identity: calls of different functions never share messages, even
+  // from the same spot (f = c ? hops : dist; f()). No marker, so it costs no message bytes.
+  exports.aggregate = function (name, fn) {
+    return function () {
+      var self = this, args = arguments;
+      return scoped(tok(name + ':'), false, function () { return fn.apply(self, args); });
+    };
+  };
+  // A branch over statements, for code rewritten by the alignment transform (web/align.js):
+  // if (enterIf(c)) { try { ... } finally { exit(); } } else { try { ... } finally { exit(); } }
+  exports.enterIf = function (cond) {
+    enter(tok('b') + (cond ? '.1' : '.0'), true);
+    return cond;
+  };
+  exports.exit = exit;
   exports.id = function () { return ctx.id; };
   exports.sense = function (name) { return ctx.sensors[name]; };
   exports.nbrSense = function (name) {
@@ -134,7 +161,7 @@
   // require('nbrjs').globals() then write nbr(1).sum(): Espruino has no destructuring import.
   exports.globals = function () {
     var g = typeof globalThis !== 'undefined' ? globalThis : global;
-    'xc retsend nbr rep share branch align id sense nbrSense start'.split(' ').forEach(function (k) { g[k] = exports[k]; });
+    'xc retsend nbr rep share branch align aggregate id sense nbrSense start'.split(' ').forEach(function (k) { g[k] = exports[k]; });
     return exports;
   };
 
@@ -158,7 +185,7 @@
         ctx = {
           id: id, key: String(id), inbox: inbox, dom: Object.keys(inbox),
           sensors: sensors || {}, nbrSensors: nbrSensors || {},
-          prev: state, state: {}, msg: {}, path: '', count: 0, k: k
+          prev: state, state: {}, msg: {}, path: '', count: 0, k: k, stack: []
         };
         var value = program();
         state = ctx.state;

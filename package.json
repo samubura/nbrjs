@@ -15,7 +15,8 @@
     "./sim": "./src/sim.js",
     "./ble": "./src/ble.js",
     "./host": "./src/host.js",
-    "./udp": "./src/udp.js"
+    "./udp": "./src/udp.js",
+    "./lib": "./src/lib.js"
   },
   "files": [
     "src",

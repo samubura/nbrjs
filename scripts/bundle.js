@@ -5,7 +5,7 @@
 var fs = require('fs'), path = require('path');
 var root = path.join(__dirname, '..');
 var mods = { 'nbrjs': 'src/core.js', 'nbrjs/sim': 'src/sim.js', 'nbrjs/ble': 'src/ble.js',
-  'nbrjs/host': 'src/host.js', 'nbrjs/udp': 'src/udp.js' };
+  'nbrjs/host': 'src/host.js', 'nbrjs/udp': 'src/udp.js', 'nbrjs/lib': 'src/lib.js' };
 var strip = function (src) { return src.replace(/^\s*\/\/.*\n/gm, ''); };
 var terser = null;
 try { terser = require('terser'); } catch (e) { /* comments-only stripping */ }
