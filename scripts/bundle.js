@@ -9,6 +9,9 @@ var mods = { 'nbrjs': 'src/core.js', 'nbrjs/sim': 'src/sim.js', 'nbrjs/ble': 'sr
 var strip = function (src) { return src.replace(/^\s*\/\/.*\n/gm, ''); };
 var terser = null;
 try { terser = require('terser'); } catch (e) { /* comments-only stripping */ }
+// Native if / ?: around aggregate code become aligned branches (src/align.js), when acorn is installed.
+var acorn = null;
+try { acorn = require('acorn'); } catch (e) { /* the program as written: use branch() explicitly */ }
 
 // Espruino-safe output: ES5, and no inlining (it leaves `var`s after a `return`,
 // relying on hoisting that Espruino does not do).
@@ -42,6 +45,11 @@ var main = function () {
     });
   };
   var app = strip(fs.readFileSync(process.argv[2], 'utf8'));
+  if (acorn) {
+    var al = require('../src/align.js').transform(app, acorn);
+    al.warnings.forEach(function (w) { console.error('warning: ' + w); });
+    app = al.code;
+  }
   scan(app);
   return Promise.all(order.map(module)).then(function (codes) {
     process.stdout.write(codes.map(function (c, i) {

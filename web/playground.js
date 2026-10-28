@@ -56,6 +56,12 @@
       '});']
   };
 
+  // Native if / ?: / && / || around aggregate code become aligned branches (src/align.js),
+  // when the page loads acorn and the transform. Returns {code, warnings}.
+  var align = function (code) {
+    if (!window.acorn || !window.nbrjsAlign) return { code: code, warnings: [] };
+    return nbrjsAlign.transform(code, acorn);
+  };
   // Runs program.js once, as a device does at boot, and returns its program function.
   var boot = function (code) {
     var started = null;
@@ -112,6 +118,7 @@
   // program.js as a device file: the library comes from the board's Storage (or the IDE's
   // module URL), so the file is just the program plus start().
   var deviceFile = function (program, target, wifi) {
+    program = align(program).code;
     var st = START[target || 'ble'].join('\n');
     if (wifi) st = st.replace("'SSID'", JSON.stringify(wifi.ssid)).replace("'PASSWORD'", JSON.stringify(wifi.password));
     var head = /globals\(\)/.test(program) ? '' : "require('nbrjs').globals();\n" +
@@ -215,8 +222,9 @@
     };
     var loadProgram = function () {
       try {
-        program = boot(progEl.value);
-        setStatus('');
+        var al = o.align === false ? { code: progEl.value, warnings: [] } : align(progEl.value);
+        program = boot(al.code);
+        setStatus(al.warnings.join(' · '));
         restart();
       } catch (e) {
         setStatus('program.js: ' + e.message, true);
@@ -447,5 +455,5 @@
     return { reset: reset, attach: attach, program: function () { return progEl.value; } };
   };
 
-  window.Playground = { mount: mount, deviceFile: deviceFile };
+  window.Playground = { mount: mount, deviceFile: deviceFile, align: align };
 })();
