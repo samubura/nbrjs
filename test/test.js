@@ -148,22 +148,22 @@ check('ble message sizes', [ble.pack(hop).length, ble.pack(rich).length], [3, 49
 var adv = null, onScan = null;
 NRF = {
   getAddress: function () { return 'aa:bb:cc:dd:00:01 public'; },
-  setScan: function (cb) { onScan = cb; },
+  setScan: function (cb) { if (cb) onScan = cb; },
   setAdvertising: function (d, o) { if (o) adv = o; }
 };
 if (typeof getTime === 'undefined') getTime = function () { return Date.now() / 1000; };
 var bytes = function (s) { var b = []; for (var i = 0; i < s.length; i++) b.push(s.charCodeAt(i)); return b; };
 var link = A.start(function () {
-  return nbr(id()).reduce(function (acc, v) { return acc + v; }, '');
-}, { target: 'ble', period: 1e6 });
+  return [nbr(id()).reduce(function (acc, v) { return acc + v; }, ''), Math.round(A.nbrSense('range').min() * 100) / 100];
+}, { target: 'ble', period: 1e6, scan: 1e6 });
 var m2 = {};
 m2[A.hash('x0')] = ['0002'];
 onScan({ id: 'aa:bb:cc:dd:00:02 public', rssi: -50, manufacturer: 0x0590, manufacturerData: bytes('N' + ble.pack(m2)) });
 onScan({ id: 'aa:bb:cc:dd:00:03 public', rssi: -50, manufacturer: 0x004c, manufacturerData: bytes('Nxx') });
 var r = link.round();
 link.stop();
-check('ble hears neighbours and advertises compactly', [link.id, r.value, ble.unpack(adv.manufacturerData.slice(1))[A.hash('x0')], adv.manufacturerData.length],
-  ['0001', '0002', ['0001'], 1 + 2 + 2 + 6]);
+check('ble hears neighbours and advertises compactly', [link.id, r.value[0], r.value[1], ble.unpack(adv.manufacturerData.slice(1))[A.hash('x0')], adv.manufacturerData.length],
+  ['0001', '0002', 0.32, ['0001'], 1 + 2 + 2 + 6]);
 
 // UDP over WiFi against a fake socket: hears a neighbour, ignores itself, broadcasts its message.
 var sent = null, onMsg = null;
@@ -177,6 +177,18 @@ onMsg('garbage');
 var ru = udp.round();
 udp.stop();
 check('udp hears neighbours and broadcasts', [ru.value, sent], ['bb', ['Naa {"x0":["aa"]}', 4210, '255.255.255.255']]);
+
+// UDP with positions: neighbours within range, and their distance as nbrSense('range').
+var onMsg2 = null;
+var sock2 = { on: function (e, cb) { onMsg2 = cb; }, bind: function () {}, close: function () {}, send: function () {} };
+var udp2 = A.start(function () { return [nbr(id()).reduce(function (acc, v) { return acc + v; }, ''), A.nbrSense('range').min()]; },
+  { target: 'udp', id: 'r1', period: 1e6, socket: sock2, position: function () { return [0, 0]; }, range: 6 });
+udp2.round();
+onMsg2('Nr2@3,4 ' + A.encode({ x0: ['r2'] }));
+onMsg2('Nr3@10,0 ' + A.encode({ x0: ['r3'] }));
+var ru2 = udp2.round();
+udp2.stop();
+check('udp with positions keeps neighbours within range', ru2.value, ['r2', 5]);
 
 // Host target: the PC sends the inbox as JSON, the board answers with one line.
 var host = A.start(() => nbr(1).sum(), { target: 'host' });

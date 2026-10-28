@@ -80,39 +80,58 @@
   };
 
   // Usually reached through require('nbrjs').start(program, {target: 'ble', ...}).
-  // opts: {period ms (1000), ttl s (3 periods), sensors: (id) => ({...}), onResult: (value, id) => ...}
+  // opts: {period ms (1000), ttl s (3 periods), scan: ms of listening per period (400; >= period
+  //        listens all the time), minRssi: ignore weaker neighbours (dBm), txPower: RSSI at 1 m (-60),
+  //        sensors: (id) => ({...}), onResult: (value, id) => ...}
+  // Neighbour sensors: nbrSense('rssi') in dBm, nbrSense('range') a rough distance in metres.
   exports.start = function (program, opts) {
     opts = opts || {};
-    var period = opts.period || 1000, ttl = opts.ttl || 3 * period / 1000;
+    var period = opts.period || 1000, ttl = opts.ttl || 3 * period / 1000, scan = opts.scan || 400;
+    var tx = opts.txPower || -60, minRssi = opts.minRssi || -200;
     var id = shortId(NRF.getAddress()), dev = A.device(id, true);
-    var inbox = {}, rssi = {}, seen = {};
+    var inbox = {}, rssi = {}, range = {}, seen = {}, stopScan = null;
 
-    NRF.setScan(function (d) {
-      if (d.manufacturer !== COMPANY) return; // filters may be ignored (ESP32)
+    var heard = function (d) {
+      if (d.manufacturer !== COMPANY || d.rssi < minRssi) return; // filters may be ignored (ESP32)
       var s = String.fromCharCode.apply(null, new Uint8Array(d.manufacturerData));
       if (s[0] !== MAGIC) return;
       var j = shortId(d.id);
       try { inbox[j] = exports.unpack(s.slice(1)); } catch (e) { return; }
       rssi[j] = d.rssi;
+      // ponytail: log-distance path loss with exponent 2; calibrate txPower per board and place.
+      range[j] = Math.pow(10, (tx - d.rssi) / 20);
       seen[j] = getTime();
-    }, { filters: [{ manufacturerData: { 0x0590: {} } }] });
+    };
+    // Listening costs most of the power: a window per period, unless scan >= period.
+    var listen = function () {
+      NRF.setScan(heard, { filters: [{ manufacturerData: { 0x0590: {} } }] });
+      if (scan < period) stopScan = setTimeout(function () { stopScan = null; NRF.setScan(); }, scan);
+    };
 
+    // Also callable on events (setWatch) for an immediate round.
     var round = function () {
       var now = getTime();
-      for (var j in seen) if (now - seen[j] > ttl) { delete inbox[j]; delete rssi[j]; delete seen[j]; }
-      var r = dev.round(program, inbox, opts.sensors ? opts.sensors(id) : {}, { rssi: rssi });
+      for (var j in seen) if (now - seen[j] > ttl) { delete inbox[j]; delete rssi[j]; delete range[j]; delete seen[j]; }
+      var r = dev.round(program, inbox, opts.sensors ? opts.sensors(id) : {}, { rssi: rssi, range: range });
       var data = exports.pack(r.message);
       // Too big: send an empty message rather than a stale one; neighbours then skip us.
       if (data.length > MAX) console.log('nbrjs: message is ' + data.length + ' bytes, BLE fits ' + MAX);
       NRF.setAdvertising({}, { showName: false, manufacturer: COMPANY, manufacturerData: MAGIC + (data.length > MAX ? '' : data), interval: 100 });
       if (opts.onResult) opts.onResult(r.value, id);
+      if (!stopScan && scan < period) listen();
       return r;
     };
+    listen();
     var timer = setInterval(round, period);
     return {
       id: id,
       round: round,
-      stop: function () { clearInterval(timer); NRF.setScan(); NRF.setAdvertising({}); }
+      stop: function () {
+        clearInterval(timer);
+        if (stopScan) clearTimeout(stopScan);
+        NRF.setScan();
+        NRF.setAdvertising({});
+      }
     };
   };
 
