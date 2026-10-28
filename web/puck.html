@@ -2,25 +2,19 @@
 <html lang="it">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Demo Puck e PC</title>
+<title>Demo Puck.js · NbrJS</title>
 <link rel="icon" href="logo.svg">
 <link rel="stylesheet" href="style.css">
-<div class="layout">
-<nav id="toc"></nav>
-<main>
-<h1>Demo · un Puck e il PC</h1>
-<p class="lead">Con un solo dispositivo: il Puck.js è un nodo vero, i suoi vicini sono simulati qui nel browser. Il programma sul Puck è quello reale e gira sull'interprete Espruino.</p>
+<main class="page">
+<h1>Demo: un Puck.js e il PC</h1>
+<p class="lead">Hai un solo Puck.js? Qui diventa un nodo di una rete simulata nel browser. Il programma gira davvero sul Puck; i vicini sono virtuali.</p>
 
-<h2>Come funziona</h2>
-<p>Sul Puck il programma parte con <code>target: 'host'</code>: il dispositivo non usa la radio per conto suo, ma aspetta il PC. A ogni round la pagina gli manda, via Bluetooth, i messaggi dei vicini simulati che sono nel suo raggio; il Puck esegue un round e risponde con il suo valore e il suo messaggio, che i vicini ricevono al round dopo. Per il programma non cambia nulla: vede vicini, campi e messaggi come su una rete vera.</p>
-
-<h2>Prova</h2>
 <ol>
-  <li>Chiudi l'Espruino Web IDE, o disconnettilo: il Puck accetta una sola connessione.</li>
-  <li><b>Connetti</b> e scegli il Puck. Serve Chrome o Edge, con la pagina aperta da <code>https://</code> o da <code>localhost</code>.</li>
-  <li><b>Carica sul Puck</b>: installa <code>program.js</code> con il target <code>host</code> (pochi secondi; il codice resta in RAM finché non togli la batteria).</li>
-  <li>Premi il <b>pulsante</b> del Puck: diventa la sorgente, e il gradiente parte da lui. I LED mostrano i salti: rosso 0, verde 1, blu 2.</li>
-  <li>Trascina il nodo <b>Puck</b> vicino o lontano da una sorgente simulata (click su un nodo) e guarda cambiare i LED.</li>
+  <li>Chiudi l'Espruino Web IDE, o disconnettilo: il Puck accetta una connessione alla volta.</li>
+  <li><b>Connetti</b> e scegli il Puck (Chrome o Edge).</li>
+  <li><b>Carica sul Puck</b>: installa la libreria e il programma, in pochi secondi.</li>
+  <li>Premi il <b>pulsante</b> del Puck: diventa una sorgente. I LED mostrano a quanti salti si trova dalla sorgente più vicina: rosso 0, verde 1, blu 2.</li>
+  <li>Trascina il nodo <b>Puck</b> nella rete, o clicca altri nodi per aggiungere sorgenti, e guarda cambiare i LED.</li>
 </ol>
 <div class="demo-bar">
   <button id="connect">Connetti</button>
@@ -30,13 +24,14 @@
 <div id="pg"></div>
 <details id="console-box"><summary>Console del Puck</summary><pre id="console"></pre></details>
 
-<div class="note">Cosa prova questa demo: il core e il tuo programma sull'interprete vero, l'allineamento con altri nodi e il formato dei messaggi. Non prova la radio fra dispositivi (l'advertising BLE del target <code>ble</code>): per quella servono almeno due schede.</div>
-<p>Se modifichi <code>program.js</code>, ricaricalo sul Puck: i nodi allineano solo se eseguono lo stesso programma.</p>
-<footer id="pager"></footer>
+<h2>Come funziona</h2>
+<p>Sul Puck il programma parte con <code>target: 'host'</code>: invece di usare la radio da solo, aspetta il PC. A ogni round la pagina gli manda i messaggi dei vicini simulati che ha nel raggio; il Puck esegue il round e risponde con il suo valore e il suo messaggio, che i vicini ricevono al round successivo. Per il programma non c'è differenza con una rete vera.</p>
+<p>Se modifichi <code>program.js</code>, ricaricalo sul Puck: i nodi si capiscono solo se eseguono lo stesso programma.</p>
+<div class="note">Questa demo prova il tuo programma sull'interprete vero e il dialogo con altri nodi. La radio fra due schede, cioè il target <code>ble</code>, si prova con almeno due dispositivi.</div>
 </main>
-</div>
 <script src="../src/core.js"></script>
 <script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
 <script src="playground.js"></script>
 <script src="device.js"></script>
 <script src="site.js"></script>

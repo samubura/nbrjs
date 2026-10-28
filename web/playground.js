@@ -77,6 +77,12 @@
     return c;
   };
 
+  // Bytes the message takes in a BLE advert (paths hashed, binary values), as on a Puck.js.
+  var bleSize = function (json) {
+    var m = A.decode(json), h = {};
+    for (var p in m) h[A.hash(p)] = m[p];
+    return 1 + nbrjsBle.pack(h).length;
+  };
   var fmt = function (v) {
     if (typeof v === 'number') return isFinite(v) ? String(Math.round(v * 10) / 10) : v > 0 ? '∞' : v < 0 ? '-∞' : 'NaN';
     if (v === null || v === undefined) return '–';
@@ -296,11 +302,11 @@
       showInfo();
     };
     var showInfo = function () {
-      if (hover === null) { info.textContent = 'Click: toggle source · Shift+click: obstacle · Drag: move · Hover: inspect'; return; }
+      if (hover === null) { info.textContent = 'Click: sorgente · Shift+click: ostacolo · Trascina: sposta · Passa sopra: ispeziona'; return; }
       var m = net.messages[hover] || '', n = 0;
       for (var id in pos) if (id !== hover && Math.hypot(pos[id][0] - pos[hover][0], pos[id][1] - pos[hover][1]) <= net.range) n++;
-      info.textContent = 'node ' + hover + ' · value ' + JSON.stringify(out[hover]) + ' · ' + n + ' neighbours · sends ' +
-        m.length + ' B: ' + m;
+      info.textContent = 'nodo ' + hover + ' · valore ' + JSON.stringify(out[hover]) + ' · ' + n + ' vicini · manda ' + m +
+        (m && window.nbrjsBle ? ' · via BLE ' + bleSize(m) + ' B' : '');
     };
 
     var pick = function (e) {

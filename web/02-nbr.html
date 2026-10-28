@@ -9,7 +9,7 @@
 <nav id="toc"></nav>
 <main>
 <h1>2 · Vicini e campi</h1>
-<p class="lead"><code>nbr(v)</code> è il primo operatore davvero aggregato: ogni nodo condivide <code>v</code> e riceve quello dei vicini.</p>
+<p class="lead">Con <code>nbr(v)</code> ogni nodo manda <code>v</code> ai vicini e riceve il loro.</p>
 
 <h2>Un valore per ogni vicino</h2>
 <p><code>nbr(v)</code> restituisce un <b>campo di vicinato</b> (field): un valore per ogni vicino, più il proprio in <code>.self</code>. Non è un numero, quindi va <b>ridotto</b> a un valore locale:</p>
@@ -23,7 +23,7 @@
 var program = () => nbr(1).sum();
 </script>
 </div>
-<p>Passa sopra un nodo: manda <code>{"x0":[1]}</code>. <code>x0</code> è il "nome" di quel <code>nbr</code> nel programma (il primo operatore aggregato), e i nodi confrontano solo valori con lo stesso nome. Ci torneremo nel capitolo sui domini.</p>
+<p>Passa sopra un nodo: manda <code>{"x0":[1]}</code>. <code>x0</code> è il nome di quel <code>nbr</code> nel programma, e i nodi confrontano solo valori con lo stesso nome. Ne riparliamo nel capitolo 5.</p>
 
 <h2>Trasformare e combinare campi</h2>
 <ul>
@@ -60,5 +60,6 @@ var program = () => nbr(sense('x')).sum() / nbr(1).sum();</code></pre>
 </div>
 <script src="../src/core.js"></script>
 <script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
 <script src="playground.js"></script>
 <script src="site.js"></script>

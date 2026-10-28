@@ -20,7 +20,7 @@
 </ol>
 <p>Nel simulatore i round sono sincroni per semplicità; sui dispositivi veri ognuno va col suo ritmo, e i programmi aggregati funzionano lo stesso.</p>
 
-<p>Un programma NbrJS è una funzione senza argomenti, <code>program</code>: è il passo 2. La più semplice mostra l'identificativo di ogni nodo con <code>id()</code>.</p>
+<p>Il programma è il passo 2: una funzione senza argomenti, <code>program</code>. Questo mostra l'identificativo di ogni nodo:</p>
 <div class="pg-embed" data-layout="line" data-nodes="8" data-sources="">
 <script type="text/plain">
 var program = () => id();
@@ -35,7 +35,7 @@ var program = () => id();
 var program = () => rep(0, (c) => c + 1);
 </script>
 </div>
-<p>Premi <b>Reset</b>: la rete riparte, e con lei gli stati. Passa sopra un nodo: il messaggio è <code>{}</code>, perché <code>rep</code> è memoria locale e non manda nulla ai vicini.</p>
+<p><b>Reset</b> fa ripartire la rete da zero. Passa sopra un nodo: il messaggio è <code>{}</code>, perché <code>rep</code> è memoria locale e non manda nulla ai vicini.</p>
 
 <div class="note">Il codice è JavaScript vero, nel sottoinsieme che gira su Espruino: arrow function, ternari, <code>Math</code>, array e oggetti sì; destructuring, spread e parametri di default no.</div>
 
@@ -61,5 +61,6 @@ var program = () => rep(+id(), (c) => c + 1);</code></pre>
 </div>
 <script src="../src/core.js"></script>
 <script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
 <script src="playground.js"></script>
 <script src="site.js"></script>

@@ -3,63 +3,67 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NbrJS</title>
-<meta name="description" content="Aggregate computing in JavaScript, dal browser a Puck.js ed ESP32: corso interattivo e playground.">
+<meta name="description" content="Aggregate computing in JavaScript: un programma per tutta la rete, dal browser a Puck.js ed ESP32.">
 <link rel="icon" href="logo.svg">
 <link rel="stylesheet" href="style.css">
-<div class="layout">
-<nav id="toc"></nav>
-<main>
+<main class="page">
 <div class="hero">
   <img src="logo.svg" alt="">
-  <div><h1>NbrJS</h1><p>aggregate computing · eXchange Calculus · JavaScript ed Espruino</p></div>
+  <div>
+    <h1>NbrJS</h1>
+    <p>Aggregate computing in JavaScript. Un programma per tutta la rete, dal browser a Puck.js ed ESP32.</p>
+  </div>
 </div>
-<p class="lead">Un corso breve e pratico: si scrive un solo programma, lo esegue ogni dispositivo, e dal loro scambiare messaggi coi vicini emerge un comportamento collettivo.</p>
-
 <div class="cta">
-  <a class="primary" href="01-round.html">Inizia il corso →</a>
+  <a class="primary" href="corso.html">Inizia il corso</a>
   <a href="playground.html">Playground</a>
-  <a href="puck.html">Demo con un Puck.js</a>
+  <a href="https://github.com/samubura/nbrjs">GitHub</a>
 </div>
 
-<p>Qui sotto 40 dispositivi eseguono le stesse due righe e calcolano, tutti insieme, la distanza dalla sorgente più vicina (il nodo cerchiato). Prova a <b>cliccare</b> altri nodi per aggiungere o togliere sorgenti, a <b>trascinarli</b>, a passarci sopra col mouse per vedere cosa ognuno manda ai vicini.</p>
-
-<div class="pg-embed" data-nodes="40" data-sources="0">
+<h2>Un programma, tutta la rete</h2>
+<p>Ogni dispositivo esegue la stessa funzione, a round, scambiando messaggi solo con i vicini. Queste due righe calcolano in quanti salti ogni nodo raggiunge la sorgente più vicina:</p>
+<div class="pg-embed" data-nodes="30" data-sources="0" data-height="300">
 <script type="text/plain">
-var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
+var hops = (src) => share(Infinity, (d) => src ? 0 : d.min() + 1);
 
-var program = () => gradient(sense('source'));
+var program = () => hops(sense('source'));
 </script>
 </div>
+<p>Clicca un nodo per renderlo sorgente, trascinalo, modifica il codice: la rete si riadatta da sola.</p>
 
-<h2>L'idea</h2>
-<p>Nella programmazione tradizionale scrivi il comportamento di <em>un</em> dispositivo e gestisci a mano messaggi, protocolli e stati. Nell'<b>aggregate computing</b> descrivi cosa deve calcolare <em>la rete nel suo insieme</em>: un <b>campo</b>, cioè un valore per ogni dispositivo (qui, una distanza). Il runtime si occupa di eseguire il programma su ciascun nodo e di far viaggiare i messaggi.</p>
-<p>Il modello teorico è il <b>field calculus</b>, oggi generalizzato nell'<b>eXchange Calculus (XC)</b>: la base di ScaFi, FCPP e Collektive. NbrJS ne è un'incarnazione minimale in JavaScript, abbastanza piccola da girare su un Puck.js o un ESP32 con <a href="https://www.espruino.com/">Espruino</a>.</p>
-
-<h2>Come funziona il playground</h2>
-<ul>
-  <li>L'editor contiene <b>program.js</b>, il codice che andrebbe sul dispositivo: definisce <code>var program = () =&gt; ...</code>, la funzione che ogni nodo esegue a ogni round. Il risultato appare sotto il nodo e ne decide il colore.</li>
-  <li>Modifica il codice: viene rieseguito subito, da una rete "fresca". Nel <a href="playground.html">playground completo</a> c'è anche <b>config.js</b>, che descrive la simulazione.</li>
-  <li><b>Click</b>: attiva/disattiva il sensore <code>source</code>. <b>Shift+click</b>: il sensore <code>obstacle</code>. <b>Trascina</b>: sposta un nodo. <b>range</b>: distanza massima per essere vicini.</li>
-  <li>Sotto la rete c'è l'ispettore: valore, numero di vicini e il <b>messaggio</b> che il nodo trasmette, con la sua dimensione in byte.</li>
-  <li><b>Espruino ↗</b> trasforma il programma in un file pronto per Puck.js o ESP32.</li>
-</ul>
-
-<h2>Il percorso</h2>
-<ol>
-  <li><a href="01-round.html">Round e stato</a>: il modello di esecuzione e <code>rep</code>.</li>
-  <li><a href="02-nbr.html">Vicini e campi</a>: <code>nbr</code>, i campi e come ridurli.</li>
-  <li><a href="03-gradiente.html">Il gradiente</a>: <code>share</code> e il primo algoritmo collettivo.</li>
-  <li><a href="04-composizione.html">Comporre funzioni</a>: broadcast e blocchi riusabili.</li>
-  <li><a href="05-branch.html">Domini e branch</a>: perché un <code>if</code> non basta.</li>
-  <li><a href="06-xc.html">xc</a>: la primitiva, con un messaggio diverso per ogni vicino.</li>
-  <li><a href="07-dispositivi.html">Sui dispositivi reali</a>: lo stesso codice su Puck.js ed ESP32 via BLE.</li>
-</ol>
-<p>Con un solo dispositivo in mano, la <a href="puck.html">demo Puck e PC</a> lo fa entrare in una rete simulata nel browser.</p>
-<p>Il <a href="playground.html">playground</a> completo ha tutti gli esempi pronti da modificare.</p>
-<footer id="pager"></footer>
-</main>
+<h2>Perché NbrJS</h2>
+<div class="features">
+  <div><h3>Gli operatori che conosci</h3><p><code>nbr</code>, <code>rep</code>, <code>share</code>, <code>branch</code>, <code>xc</code>, con la semantica dell'eXchange Calculus di ScaFi, FCPP e Collektive.</p></div>
+  <div><h3>Fatto per l'embedded</h3><p>Circa 3 KB minificato, eseguito dalla flash. Su Bluetooth un gradiente occupa 3 byte per messaggio.</p></div>
+  <div><h3>Stesso codice ovunque</h3><p>Simulatore nel browser, Node, Puck.js ed ESP32: cambia solo il <code>target</code> nella configurazione.</p></div>
+  <div><h3>Dal browser alla scheda</h3><p>Carichi il programma via Bluetooth o USB direttamente dal playground, senza IDE.</p></div>
 </div>
+
+<h2>Come si usa</h2>
+<p>Sui dispositivi, con <a href="https://www.espruino.com/">Espruino</a>: scrivi il programma, poi scegli dove gira.</p>
+<pre><code>require('nbrjs').globals();
+
+var hops = (src) => share(Infinity, (d) => src ? 0 : d.min() + 1);
+var program = () => hops(sense('source'));
+
+start(program, {
+  target: 'ble',          // 'udp' per il WiFi dell'ESP32, 'sim' per simulare
+  period: 1000,
+  sensors: () => ({ source: BTN1.read() }),
+  onResult: (h) => LED1.write(h === 0)
+});</code></pre>
+<p>Nel playground, <b>Sul dispositivo ↗</b> installa la libreria sulla scheda e carica il programma. Per l'ESP32 c'è una <a href="esp32.html">guida passo passo</a>; con un solo Puck.js puoi provare la <a href="puck.html">demo con il PC</a>.</p>
+<p>Nel browser bastano due script, <code>src/core.js</code> e <code>src/sim.js</code>; in Node, <code>require('nbrjs')</code>.</p>
+
+<h2>Da dove partire</h2>
+<ul>
+  <li><a href="corso.html">Il corso</a>: sette capitoli brevi, con esercizi da provare nel simulatore.</li>
+  <li><a href="playground.html">Il playground</a>: esempi pronti da modificare.</li>
+  <li><a href="https://github.com/samubura/nbrjs#readme">Il README</a>: API e configurazione in sintesi.</li>
+</ul>
+</main>
 <script src="../src/core.js"></script>
 <script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
 <script src="playground.js"></script>
 <script src="site.js"></script>

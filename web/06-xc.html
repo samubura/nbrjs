@@ -19,7 +19,7 @@
   <li>se restituisce un valore normale, lo ricevono tutti;</li>
   <li><code>retsend(risultato, daInviare)</code> separa il valore restituito da quello trasmesso.</li>
 </ul>
-<p>Gli operatori visti finora sono casi particolari: <code>share</code> è <code>xc</code> che restituisce un valore normale, e <code>nbr(v)</code> è <code>xc(v, (n) =&gt; retsend(n, v))</code>.</p>
+<p>Gli operatori visti finora sono casi particolari: <code>share</code> è <code>xc</code> che restituisce un valore normale, e <code>nbr(v)</code> è quasi <code>xc(v, (n) =&gt; retsend(n, v))</code>; l'unica differenza è che in <code>nbr</code> il <code>.self</code> è già il <code>v</code> di questo round.</p>
 
 <h2>Età dei collegamenti</h2>
 <p>A ogni vicino rimando ciò che mi ha mandato, più uno. Ogni coppia di nodi tiene così un contatore privato che cresce finché il collegamento resiste. Ogni nodo mostra l'età del suo collegamento più recente: <b>trascina un nodo</b> in un altro punto e i suoi nuovi collegamenti ripartono da 1.</p>
@@ -28,7 +28,7 @@
 var program = () => xc(0, (n) => n.map((x) => x + 1)).min();
 </script>
 </div>
-<p>Passa sopra un nodo: il messaggio ha la forma <code>[default, {id: valore}]</code>, un valore per ogni vicino.</p>
+<p>Passa sopra un nodo: il messaggio ha la forma <code>[default, {id: valore}]</code>, un valore per ogni vicino. Via Bluetooth ogni vicino in più costa circa 3 byte.</p>
 
 <h2>Collect: risalire il gradiente</h2>
 <p>Il blocco "inverso" del broadcast: raccogliere un'informazione verso la sorgente. Ogni nodo sceglie come <b>parent</b> il vicino più vicino alla sorgente e manda <em>solo a lui</em> la sua somma parziale; agli altri manda 0. La sorgente ottiene il numero di nodi che la raggiungono.</p>
@@ -48,7 +48,7 @@ var collect = (dist, v) => {
 var program = () => collect(gradient(sense('source')), 1);
 </script>
 </div>
-<p>Con <code>nbr</code> o <code>share</code> questo richiederebbe di mandare a tutti "il mio parent è X" e far filtrare ai vicini. Con <code>xc</code> il messaggio è già indirizzato: è il motivo per cui XC è la base dei framework moderni.</p>
+<p>Con <code>nbr</code> o <code>share</code> dovresti mandare a tutti "il mio parent è X" e lasciare che ognuno filtri. Con <code>xc</code> il messaggio è già indirizzato.</p>
 
 <h2>Prova tu</h2>
 <p class="task">1. Ogni nodo conta i propri figli: quanti vicini l'hanno scelto come parent.</p>
@@ -80,5 +80,6 @@ var myShare = (init, f) => xc(init, (n) => f(n));</code></pre>
 </div>
 <script src="../src/core.js"></script>
 <script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
 <script src="playground.js"></script>
 <script src="site.js"></script>

@@ -8,88 +8,61 @@
 <div class="layout">
 <nav id="toc"></nav>
 <main>
-<h1>7 · Sui dispositivi reali</h1>
-<p class="lead">Lo stesso programma del simulatore gira su Puck.js ed ESP32 con Espruino, e i dispositivi si parlano via Bluetooth Low Energy.</p>
+<h1>7 · Sui dispositivi</h1>
+<p class="lead">Il programma che hai scritto nel simulatore gira uguale su Puck.js ed ESP32, con <a href="https://www.espruino.com/">Espruino</a>. Cambia solo dove lo fai partire.</p>
 
-<h2>Cosa va sul dispositivo</h2>
+<h2>Dove gira: <code>start</code></h2>
+<p>Sul dispositivo il file termina con <code>start(program, config)</code>. Il programma non sa su che rete gira: lo decide <code>config.target</code>.</p>
+<pre><code>require('nbrjs').globals();
+
+var hops = (src) => share(Infinity, (d) => src ? 0 : d.min() + 1);
+var program = () => hops(sense('source'));
+
+start(program, {
+  target: 'ble',
+  period: 1000,
+  sensors: () => ({ source: BTN1.read() }),   // i valori letti con sense()
+  onResult: (h) => LED1.write(h === 0)         // cosa fare col risultato
+});</code></pre>
 <ul>
-  <li><code>nbrjs</code> (<code>src/core.js</code>): il core, circa 5 KB;</li>
-  <li><code>nbrjs/ble</code> (<code>src/ble.js</code>): il trasporto. Ogni round il messaggio finisce nel pacchetto di <b>advertising</b> BLE, e i vicini sono i dispositivi sentiti negli ultimi secondi. Nessuna connessione, nessun pairing.</li>
+  <li><code>'ble'</code>: Bluetooth Low Energy, su Puck.js ed ESP32. Nessuna connessione o pairing: ogni round il messaggio va nel pacchetto di advertising, e i vicini sono i dispositivi sentiti negli ultimi secondi (<code>ttl</code>).</li>
+  <li><code>'udp'</code>: WiFi, su ESP32. Il messaggio va in broadcast sulla rete locale, quindi tutti i dispositivi della rete sono vicini.</li>
+  <li><code>'sim'</code>: il simulatore, nel browser o in Node.</li>
 </ul>
-<p>Il simulatore e questo sito non vanno sul dispositivo.</p>
 
-<h2>Il limite: 23 byte</h2>
-<p>Un pacchetto di advertising contiene circa 23 byte utili. Qui sotto c'è il gradiente in salti che gira sui dispositivi: passa sopra un nodo per vedere i byte del messaggio.</p>
-<div class="pg-embed" data-nodes="30" data-sources="0">
+<h2>Messaggi piccoli</h2>
+<p>Un pacchetto di advertising ha 23 byte utili. Via Bluetooth i messaggi viaggiano in un formato binario compatto: ogni operatore costa 2 byte più il valore, e un intero fra 0 e 63 sta in un byte solo. Il gradiente qui sotto manda 4 byte: passa sopra un nodo per vedere il messaggio e la sua dimensione.</p>
+<div class="pg-embed" data-nodes="30" data-sources="0" data-height="280">
 <script type="text/plain">
 var program = () => share(Infinity, (d) => sense('source') ? 0 : d.min() + 1);
 </script>
 </div>
-<p>Sono circa 10 byte: ci stanno. Qualche regola per restare sotto il limite:</p>
 <ul>
-  <li>preferisci interi a decimali (<code>1.4142135</code> occupa 9 byte);</li>
-  <li>pochi operatori aggregati per programma: ognuno aggiunge una chiave (<code>x0</code>, <code>x1</code>...);</li>
-  <li>i messaggi per-vicino di <code>xc</code> costano circa 10 byte per vicino: con BLE sono adatti a pochi vicini;</li>
-  <li>se il messaggio non ci sta, il dispositivo lo scrive in console e non lo trasmette.</li>
+  <li>Gli interi costano meno dei decimali, che diventano float a 32 bit (5 byte).</li>
+  <li>Con <code>xc</code>, ogni valore diverso per un vicino aggiunge circa 3 byte.</li>
+  <li>Se un messaggio supera i 23 byte, il dispositivo lo segnala in console e manda un messaggio vuoto: i vicini lo ignorano finché non torna nei limiti.</li>
+  <li>Sul WiFi (<code>'udp'</code>) il limite non c'è.</li>
 </ul>
-<p>Come distanza dai vicini, sui dispositivi c'è <code>nbrSense('rssi')</code>: la potenza del segnale ricevuto, in dBm (più vicino a 0 vuol dire più vicino).</p>
+<p>Come distanza dai vicini, via Bluetooth hai <code>nbrSense('rssi')</code>: la potenza del segnale in dBm, più vicina a 0 quando il vicino è più vicino. <code>nbrSense('range')</code> esiste solo nel simulatore.</p>
 
-<h2>Simulazione o rete reale: cambia solo la config</h2>
-<p>Il programma aggregato non sa dove gira. Lo decide <code>start(program, config)</code>, in base a <code>config.target</code>:</p>
+<h2>Caricarlo sulla scheda</h2>
+<p>Dal <a href="playground.html">playground</a>, con Chrome o Edge: <b>Sul dispositivo ↗</b>, scegli la rete e <b>Carica via Bluetooth</b> o <b>via USB</b>. La prima volta la libreria viene installata nella memoria flash della scheda, poi viaggia solo il programma. Con <b>Salva</b> il programma riparte da solo a ogni accensione.</p>
+<p>Preferisci l'<a href="https://www.espruino.com/ide/">Espruino Web IDE</a>? In <i>Settings → Communications → Module URL</i> aggiungi l'indirizzo dei moduli che trovi nella stessa finestra: da lì in poi <code>require('nbrjs')</code> funziona come un modulo ufficiale.</p>
+<p>Per l'ESP32, dall'installazione di Espruino alla scelta fra Bluetooth e WiFi, c'è la <a href="esp32.html">guida ESP32</a>. Se hai un solo Puck.js, la <a href="puck.html">demo con il PC</a> lo fa entrare in una rete simulata.</p>
+
+<h2>Il JavaScript di Espruino</h2>
+<p>Espruino interpreta direttamente il sorgente e supporta un sottoinsieme di JavaScript:</p>
 <ul>
-  <li><code>'sim'</code>: il simulatore (qui nel browser o in Node), con <code>nodes</code>, <code>layout</code>, <code>range</code>;</li>
-  <li><code>'ble'</code>: Puck.js ed ESP32, con <code>period</code> e <code>ttl</code> (dopo quanti secondi un vicino muto viene dimenticato);</li>
-  <li><code>'host'</code>: un dispositivo collegato al PC, che gli simula i vicini (la <a href="puck.html">demo Puck e PC</a>).</li>
-</ul>
-<p>I campi comuni sono <code>period</code>, <code>sensors(id)</code> (i valori letti con <code>sense()</code>) e <code>onResult(valore, id)</code>. Nel playground è la scheda <b>config.js</b>. Ecco il file completo per i dispositivi, <code>examples/hops.js</code>:</p>
-<pre><code>// Hop-count gradient on Puck.js or ESP32 (Espruino), over BLE.
-// Press the button to toggle the source; LEDs show the hops: 0 red, 1 green, 2 blue, more off.
-// Bundle and upload: npm run bundle -- examples/hops.js &gt; dist/hops.js
-require('nbrjs').globals();
-
-// The aggregate program: identical in the simulator and on the devices.
-var hops = (src) =&gt; share(Infinity, (d) =&gt; src ? 0 : d.min() + 1);
-var program = () =&gt; hops(sense('source'));
-
-// Puck.js pins. ESP32 dev boards: e.g. BUTTON = D0 (BOOT), LEDS = [D2].
-var BUTTON = BTN, LEDS = [LED1, LED2, LED3];
-var source = false;
-setWatch(() =&gt; { source = !source; }, BUTTON, { edge: 'rising', repeat: true, debounce: 50 });
-
-// Only the config knows where the program runs: target 'ble' here, 'sim' in the simulator.
-start(program, {
-  target: 'ble',
-  period: 1000,
-  sensors: () =&gt; ({ source: source }),
-  onResult: (h, id) =&gt; {
-    LEDS.forEach((l, i) =&gt; l.write(i === h));
-    console.log(id + ' hops=' + h);
-  }
-});</code></pre>
-
-<h2>Caricarlo</h2>
-<p>Tre strade, dalla più rapida:</p>
-<ol>
-  <li><b>Dal playground</b>: il pulsante <b>Espruino ↗</b> genera il file pronto, con i moduli dentro e <code>target: 'ble'</code>. Copialo nell'<a href="https://www.espruino.com/ide/">Espruino Web IDE</a> (editor a destra), connettiti al dispositivo e premi Upload.</li>
-  <li><b>Dal Web IDE, con i moduli online</b>: in <i>Settings → Communications → Module URL</i> aggiungi, separato da <code>|</code>, l'indirizzo <code>…/modules</code> di questo sito. Poi <code>require('nbrjs')</code> e <code>require('nbrjs/ble')</code> funzionano come i moduli ufficiali. Con questa strada scrivi esplicitamente <code>require('nbrjs/ble')</code>, perché l'IDE carica solo i moduli che vede nominati.</li>
-  <li><b>Da riga di comando</b>: <code>npm run bundle -- examples/hops.js &gt; dist/hops.js</code> crea lo stesso file del pulsante.</li>
-</ol>
-<p>Hai un solo dispositivo? La <a href="puck.html">demo Puck e PC</a> lo collega al browser, che simula i vicini.</p>
-<p>Ripeti su almeno tre dispositivi e premi il pulsante su uno: i LED mostrano i salti (rosso 0, verde 1, blu 2). Il codice caricato senza <code>save()</code> resta in RAM: per ripartire basta togliere la batteria.</p>
-<div class="note">Su ESP32 il BLE dev'essere attivo nel firmware (<code>ESP32.enableBLE(true)</code>, poi riavvio). ESP-NOW non è esposto da Espruino, quindi Puck.js ed ESP32 si parlano via BLE.</div>
-
-<h2>Le regole di Espruino</h2>
-<p>Il codice è interpretato direttamente dal sorgente, con un sottoinsieme di JavaScript:</p>
-<ul>
-  <li>sì: arrow function, template literal, classi, <code>Math</code>, <code>JSON</code>, metodi degli array;</li>
+  <li>sì: arrow function, template literal, classi, <code>Math</code>, <code>JSON</code>, i metodi degli array;</li>
   <li>no: destructuring, spread, parametri di default, Map/Set, <code>for...of</code>, async;</li>
   <li>niente hoisting: definisci le funzioni <b>prima</b> di usarle (<code>var f = () =&gt; ...</code>).</li>
 </ul>
-<p>Il playground usa lo stesso stile, quindi quello che scrivi qui funziona anche lì.</p>
+<p>Il simulatore del browser è più permissivo: tutti gli esempi di questo sito restano nel sottoinsieme, così girano anche sulla scheda.</p>
 <footer id="pager"></footer>
 </main>
 </div>
 <script src="../src/core.js"></script>
 <script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
 <script src="playground.js"></script>
 <script src="site.js"></script>
