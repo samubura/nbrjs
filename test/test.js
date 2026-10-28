@@ -99,6 +99,12 @@ var r = link.round();
 link.stop();
 check('ble hears neighbours and advertises compactly', [link.id, r.value, adv.manufacturerData], ['0001', '0002', 'N{"x0":["0001"]}']);
 
+// Host target: the PC sends the inbox as JSON, the board answers with one line.
+var host = A.start(() => nbr(1).sum(), { target: 'host' });
+var line1 = nbrjsRound(A.encode({ inbox: { 7: { x0: [1] } }, nbr: {} }));
+host.stop();
+check('host answers the PC with one line', line1, 'NBR{"id":"puck","v":1,"m":{"x0":[1]}}');
+
 console.log(failed ? failed + ' FAILED' : 'ALL OK');
 if (failed && typeof process !== 'undefined' && process.exit) process.exit(1);
 var result = !failed; // read by `espruino --test`

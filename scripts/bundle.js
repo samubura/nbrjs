@@ -2,7 +2,7 @@
 // Usage: node scripts/bundle.js app.js > app.bundle.js   (then upload with the Web IDE or `espruino` CLI)
 var fs = require('fs'), path = require('path');
 var root = path.join(__dirname, '..');
-var mods = { 'nbrjs': 'src/core.js', 'nbrjs/sim': 'src/sim.js', 'nbrjs/ble': 'src/ble.js' };
+var mods = { 'nbrjs': 'src/core.js', 'nbrjs/sim': 'src/sim.js', 'nbrjs/ble': 'src/ble.js', 'nbrjs/host': 'src/host.js' };
 // Full-line comments cost RAM on the device: Espruino keeps function source.
 var read = function (f) { return fs.readFileSync(f, 'utf8').replace(/^\s*\/\/.*\n/gm, ''); };
 

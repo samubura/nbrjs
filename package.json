@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/core.js",
     "./sim": "./src/sim.js",
-    "./ble": "./src/ble.js"
+    "./ble": "./src/ble.js",
+    "./host": "./src/host.js"
   },
   "files": [
     "src",
