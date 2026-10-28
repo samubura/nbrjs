@@ -38,7 +38,7 @@ var program = () => nbrSense('range').min();
 </div>
 
 <h2>Prova tu</h2>
-<p class="task">1. Il massimo id fra i vicini (gli id del simulatore sono stringhe: usa <code>+mid()</code>).</p>
+<p class="task">1. Il massimo id fra i vicini (gli id del simulatore sono stringhe: usa <code>+id()</code>).</p>
 <p class="task">2. "Sono un leader locale?": <code>true</code> se il mio id è maggiore di quello di tutti i vicini.</p>
 <p class="task">3. La posizione x media dei vicini (sensore <code>sense('x')</code>).</p>
 <div class="pg-embed" data-nodes="30" data-sources="">
@@ -47,9 +47,9 @@ var program = () => nbr(1).sum();
 </script>
 </div>
 <details><summary>Soluzioni</summary>
-<pre><code>var program = () => nbr(+mid()).max();
+<pre><code>var program = () => nbr(+id()).max();
 
-var program = () => nbr(+mid()).max() &lt; +mid();
+var program = () => nbr(+id()).max() &lt; +id();
 
 var program = () => nbr(sense('x')).sum() / nbr(1).sum();</code></pre>
 <p>Il leader locale funziona anche per nodi isolati: <code>.max()</code> di un campo vuoto è <code>-Infinity</code>.</p>

@@ -2,7 +2,7 @@
 var A = require('nbrjs');
 var sim = require('nbrjs/sim');
 var nbr = A.nbr, rep = A.rep, share = A.share, xc = A.xc,
-    retsend = A.retsend, branch = A.branch, mid = A.mid, sense = A.sense;
+    retsend = A.retsend, branch = A.branch, id = A.id, sense = A.sense;
 
 var failed = 0;
 var check = function (name, actual, expected) {
@@ -24,11 +24,11 @@ var count = function (acc) { return acc + 1; };
 var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(A.nbrSense('range'), (a, b) => a + b).min());
 
 check('nbr sees neighbour ids', run(line(3), function () {
-  return nbr(mid()).reduce(function (acc, v) { return acc + v; }, '');
+  return nbr(id()).reduce(function (acc, v) { return acc + v; }, '');
 }, 2), { 0: '1', 1: '02', 2: '1' });
 
 check('nbr self is current value', run(line(2), function () {
-  return nbr(mid()).self;
+  return nbr(id()).self;
 }, 2), { 0: '0', 1: '1' });
 
 check('rep counts rounds', run(line(2), function () {
@@ -36,7 +36,7 @@ check('rep counts rounds', run(line(2), function () {
 }, 3), { 0: 3, 1: 3 });
 
 check('gradient converges on a line', run(line(5), function () {
-  return gradient(mid() === '0');
+  return gradient(id() === '0');
 }, 6), { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4 });
 
 var sides = { 0: { left: true }, 1: { left: true }, 2: { left: false }, 3: { left: false } };
@@ -54,18 +54,18 @@ check('fields from outside a branch fold on the branch domain', run(line(4), fun
 }, 2, sides), { 0: 1, 1: 1, 2: 1, 3: 1 });
 
 check('neighbours skipping an operator are not aligned with it', run(line(3), function () {
-  return mid() === '1' ? -1 : nbr(1).sum();
+  return id() === '1' ? -1 : nbr(1).sum();
 }, 2), { 0: 0, 1: -1, 2: 0 });
 
 // Round 1 knows no neighbours (default only), round 2 sends overrides, round 3 receives them.
 check('xc sends a different value to each neighbour', run(line(3), function () {
   return xc('', function (n) {
     return retsend(n.reduce(function (acc, v) { return acc + v + ' '; }, ''),
-      n.map(function (v, id) { return mid() + '>' + id; }));
+      n.map(function (v, j) { return id() + '>' + j; }));
   });
 }, 3), { 0: '1>0 ', 1: '0>1 2>1 ', 2: '1>2 ' });
 
-check('field shorthands', run(line(3), () => [nbr(1).sum(), nbr(+mid()).max(), nbr(+mid()).min()], 2),
+check('field shorthands', run(line(3), () => [nbr(1).sum(), nbr(+id()).max(), nbr(+id()).min()], 2),
   { 0: [1, 1, 1], 1: [2, 2, 0], 2: [1, 1, 1] });
 
 A.globals();
@@ -91,7 +91,7 @@ NRF = {
 if (typeof getTime === 'undefined') getTime = function () { return Date.now() / 1000; };
 var bytes = function (s) { var b = []; for (var i = 0; i < s.length; i++) b.push(s.charCodeAt(i)); return b; };
 var link = A.start(function () {
-  return nbr(mid()).reduce(function (acc, v) { return acc + v; }, '');
+  return nbr(id()).reduce(function (acc, v) { return acc + v; }, '');
 }, { target: 'ble', period: 1e6 });
 onScan({ id: 'aa:bb:cc:dd:00:02 public', rssi: -50, manufacturer: 0x0590, manufacturerData: bytes('N' + A.encode({ x0: ['0002'] })) });
 onScan({ id: 'aa:bb:cc:dd:00:03 public', rssi: -50, manufacturer: 0x004c, manufacturerData: bytes('Nxx') });

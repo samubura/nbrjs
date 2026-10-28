@@ -112,7 +112,7 @@
   exports.align = function (key, fn) {
     return scoped(sub('a:' + key), fn);
   };
-  exports.mid = function () { return ctx.id; };
+  exports.id = function () { return ctx.id; };
   exports.sense = function (name) { return ctx.sensors[name]; };
   exports.nbrSense = function (name) {
     var s = ctx.nbrSensors[name] || {};
@@ -132,7 +132,7 @@
   // require('nbrjs').globals() then write nbr(1).sum(): Espruino has no destructuring import.
   exports.globals = function () {
     var g = typeof globalThis !== 'undefined' ? globalThis : global;
-    'xc retsend nbr rep share branch align mid sense nbrSense start'.split(' ').forEach(function (k) { g[k] = exports[k]; });
+    'xc retsend nbr rep share branch align id sense nbrSense start'.split(' ').forEach(function (k) { g[k] = exports[k]; });
     return exports;
   };
 

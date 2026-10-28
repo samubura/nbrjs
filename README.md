@@ -31,7 +31,7 @@ start(program, {
 | `share(init, n => ...)` | state shared with the neighbours (`xc` returning a local value) |
 | `branch(c, () => ..., () => ...)` | splits the domain: the two branches never see each other |
 | `align(key, () => ...)` | explicit alignment (loops, dynamic structures) |
-| `mid()`, `sense(name)`, `nbrSense(name)` | device id, local sensor, per-neighbour sensor (field) |
+| `id()`, `sense(name)`, `nbrSense(name)` | device id, local sensor, per-neighbour sensor (field) |
 | `start(program, config)` | runs it on `config.target`: `'ble'` (`nbrjs/ble`) or `'sim'` (`nbrjs/sim`) |
 | `globals()` | the operators above as globals |
 | `device(id).round(program, inbox, sensors, nbrSensors)` | one round by hand → `{value, message}` |

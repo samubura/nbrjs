@@ -24,7 +24,7 @@ var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
   n.zip(nbrSense('range'), (p, r) => [p[0] + r, p[1]])
    .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
 
-var program = () => broadcast(sense('source'), mid())[1];`,
+var program = () => broadcast(sense('source'), id())[1];`,
     config:
 `return {
   target: 'sim',

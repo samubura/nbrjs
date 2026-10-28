@@ -19,7 +19,7 @@ var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
    .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
 
 // Ogni nodo mostra l'id della sorgente più vicina: una partizione di Voronoi.
-var program = () => broadcast(sense('source'), mid())[1];
+var program = () => broadcast(sense('source'), id())[1];
 </script>
 </div>
 <p>I colori sono uno per valore distinto: ogni regione è "di proprietà" di una sorgente. Aggiungi sorgenti e guarda le regioni riorganizzarsi.</p>
@@ -34,7 +34,7 @@ var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
    .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
 
 // A è la sorgente, B è il nodo 35
-var program = () => broadcast(mid() === '35', gradient(sense('source')))[1];
+var program = () => broadcast(id() === '35', gradient(sense('source')))[1];
 </script>
 </div>
 <p>Trascina il nodo 35 o la sorgente: tutta la rete aggiorna il valore. Nota che ogni chiamata (<code>gradient</code>, <code>broadcast</code>) ha il suo spazio nei messaggi (<code>x0</code>, <code>x1</code>): due blocchi non si confondono mai.</p>
@@ -48,7 +48,7 @@ var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
   n.zip(nbrSense('range'), (p, r) => [p[0] + r, p[1]])
    .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
 
-var program = () => broadcast(sense('source'), mid())[1];
+var program = () => broadcast(sense('source'), id())[1];
 </script>
 </div>
 <details><summary>Soluzioni</summary>

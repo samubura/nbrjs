@@ -4,7 +4,7 @@
 // Playground.mount(el, {program, config: object | code, tabs, presets, height}). Browser only.
 (function () {
   var A = nbrjs, S = nbrjsSim;
-  var OPS = ['xc', 'retsend', 'nbr', 'rep', 'share', 'branch', 'align', 'mid', 'sense', 'nbrSense'];
+  var OPS = ['xc', 'retsend', 'nbr', 'rep', 'share', 'branch', 'align', 'id', 'sense', 'nbrSense'];
   // Stand-ins so a whole device file pastes in unchanged: start() hands us the program,
   // the board's pins and setWatch do nothing (inputs are simulated through config.js sensors).
   var PIN = { read: function () { return false; }, write: function () {} };
@@ -338,7 +338,7 @@
       sel.onchange = function () { show(o.presets[sel.value].program, o.presets[sel.value].config); };
       if (!o.program) { o.program = o.presets[0].program; o.config = o.presets[0].config; }
     }
-    show(o.program || 'var program = () => mid();', typeof o.config === 'string' ? o.config : null);
+    show(o.program || 'var program = () => id();', typeof o.config === 'string' ? o.config : null);
     setPlaying(playing);
     // Pause the simulation when scrolled out of view (tutorial pages have many).
     if (window.IntersectionObserver) {
