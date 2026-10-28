@@ -14,7 +14,8 @@
     ".": "./src/core.js",
     "./sim": "./src/sim.js",
     "./ble": "./src/ble.js",
-    "./host": "./src/host.js"
+    "./host": "./src/host.js",
+    "./udp": "./src/udp.js"
   },
   "files": [
     "src",

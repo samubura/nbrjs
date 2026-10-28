@@ -99,6 +99,19 @@ var r = link.round();
 link.stop();
 check('ble hears neighbours and advertises compactly', [link.id, r.value, adv.manufacturerData], ['0001', '0002', 'N{"x0":["0001"]}']);
 
+// UDP over WiFi against a fake socket: hears a neighbour, ignores itself, broadcasts its message.
+var sent = null, onMsg = null;
+var fakeSock = { on: function (e, cb) { onMsg = cb; }, bind: function () {}, close: function () {},
+  send: function (d, port, addr) { sent = [d, port, addr]; } };
+var udp = A.start(function () { return nbr(id()).reduce(function (acc, v) { return acc + v; }, ''); },
+  { target: 'udp', id: 'aa', period: 1e6, socket: fakeSock });
+onMsg('Nbb ' + A.encode({ x0: ['bb'] }));
+onMsg('Naa ' + A.encode({ x0: ['self'] }));
+onMsg('garbage');
+var ru = udp.round();
+udp.stop();
+check('udp hears neighbours and broadcasts', [ru.value, sent], ['bb', ['Naa {"x0":["aa"]}', 4210, '255.255.255.255']]);
+
 // Host target: the PC sends the inbox as JSON, the board answers with one line.
 var host = A.start(() => nbr(1).sum(), { target: 'host' });
 var line1 = nbrjsRound(A.encode({ inbox: { 7: { x0: [1] } }, nbr: {} }));
