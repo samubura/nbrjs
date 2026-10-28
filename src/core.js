@@ -164,7 +164,8 @@
     if (v === -Infinity) return '~-inf~';
     if (!v || typeof v !== 'object') return v;
     var o = Array.isArray(v) ? [] : {};
-    for (var k in v) o[k] = mark(v[k]);
+    // Not for...in: recursing 4+ levels inside it corrupts refcounts on Espruino 2v29.
+    Object.keys(v).forEach(function (k) { o[k] = mark(v[k]); });
     return o;
   }
   exports.encode = function (msg) {
