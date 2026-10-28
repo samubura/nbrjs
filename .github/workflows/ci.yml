@@ -31,4 +31,5 @@ jobs:
         with:
           path: .espruino
           key: espruino-linux-${{ hashFiles('scripts/espruino-test.sh') }}
+      - run: npm ci   # terser: the bundle under test is minified, as on devices
       - run: npm run test:espruino

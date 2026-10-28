@@ -86,7 +86,7 @@ details summary { cursor: pointer; font-weight: 600; }
 .pg-embed > script { display: none; }
 .pg-export { width: min(760px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
 .pg-export::backdrop { background: rgb(0 0 0 / .4); }
-.pg-export textarea { width: 100%; height: 50vh; font-size: 12px; background: var(--code-bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+.pg-export textarea { width: 100%; height: 30vh; font-size: 12px; background: var(--code-bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
 .pg-dialog-bar { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
 .pg-dialog-bar button { font: inherit; font-size: 14px; color: var(--fg); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 14px; cursor: pointer; }
 
@@ -95,3 +95,12 @@ details summary { cursor: pointer; font-weight: 600; }
 .demo-bar button { font: inherit; color: var(--fg); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
 .demo-bar button:disabled { opacity: .5; cursor: default; }
 #console { max-height: 14em; overflow: auto; font-size: 12px; }
+
+.pg-export h3 { margin: 0 0 6px; }
+.pg-export p { margin: 6px 0 12px; color: var(--dim); }
+.pg-form { display: grid; gap: 10px; font-size: 14px; }
+.pg-form select, .pg-form input:not([type=checkbox]) { font: inherit; color: var(--fg); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
+.pg-dev-status { margin-right: auto; align-self: center; font-size: 14px; color: var(--dim); }
+.pg-dev-log { font-size: 12px; max-height: 10em; overflow: auto; }
+.pg-export details { margin-top: 14px; }
+.pg-dialog-bar button:disabled { opacity: .5; cursor: default; }

@@ -11,7 +11,7 @@
   var HW = { setWatch: function () {}, BTN: PIN, BTN1: PIN, LED1: PIN, LED2: PIN, LED3: PIN, D0: PIN, D2: PIN };
 
   var DEFAULT_CONFIG = [
-    "// Where program.js runs. On Puck.js / ESP32 the target is 'ble' (see the Espruino button).",
+    "// The simulated network. On real boards, see 'Sul dispositivo'.",
     'return {',
     "  target: 'sim',",
     '  period: 200,',
@@ -22,30 +22,34 @@
     '};'
   ].join('\n');
 
-  var START = {};
-  START.ble = [
-    '',
-    '// Same program, real network: only the config changed.',
-    'start(program, {',
-    "  target: 'ble',",
-    '  period: 1000,',
-    "  // map the board's inputs to the names program.js reads with sense(), e.g. Puck.js button:",
-    '  sensors: () => ({ source: BTN.read() }),',
-    '  onResult: (v, id) => console.log(id, v)',
-    '});'
-  ].join('\n');
-  START.host = [
-    '',
-    '// Same program, neighbours played by the PC (puck.html): only the config changed.',
-    'var source = false;',
-    "setWatch(() => { source = !source; }, BTN, { edge: 'rising', repeat: true, debounce: 50 });",
-    'start(program, {',
-    "  target: 'host',",
-    '  sensors: () => ({ source: source }),',
-    '  // the LEDs show small numbers: 0 red, 1 green, 2 blue',
-    '  onResult: (v) => { LED1.write(v === 0); LED2.write(v === 1); LED3.write(v === 2); }',
-    '});'
-  ].join('\n');
+  // The start() call a device file ends with, per target: only this changes between networks.
+  var START = {
+    ble: [
+      'start(program, {',
+      "  target: 'ble',",
+      '  period: 1000,',
+      "  // the board's inputs, read in program.js with sense(): here the button",
+      '  sensors: () => ({ source: BTN1.read() }),',
+      '  onResult: (v, id) => LED1.write(v === 0)',
+      '});'],
+    udp: [
+      'start(program, {',
+      "  target: 'udp',",
+      "  wifi: { ssid: 'SSID', password: 'PASSWORD' },",
+      '  period: 1000,',
+      '  sensors: () => ({ source: BTN1.read() }),',
+      '  onResult: (v, id) => LED1.write(v === 0)',
+      '});'],
+    host: [
+      'var source = false;',
+      "setWatch(() => { source = !source; }, BTN1, { edge: 'rising', repeat: true, debounce: 50 });",
+      'start(program, {',
+      "  target: 'host',",
+      '  sensors: () => ({ source: source }),',
+      '  // the LEDs show small numbers: 0 red, 1 green, 2 blue',
+      '  onResult: (v) => { LED1.write(v === 0); LED2.write(v === 1); LED3.write(v === 2); }',
+      '});']
+  };
 
   // Runs program.js once, as a device does at boot, and returns its program function.
   var boot = function (code) {
@@ -92,21 +96,22 @@
     return 'hsl(' + hue(JSON.stringify(v)) + ',65%,55%)';
   };
 
-  // Upload-ready file for the Espruino Web IDE: modules inlined as the IDE does, target 'ble' (or 'host').
-  var SRC = (document.querySelector('script[src$="core.js"]') || {}).src || '../src/core.js';
-  var exportForEspruino = function (program, target) {
-    target = target || 'ble';
-    var get = function (f) {
-      return fetch(new URL(f, SRC)).then(function (r) {
-        if (!r.ok) throw new Error(f + ': ' + r.status);
-        return r.text();
-      }).then(function (t) { return t.replace(/^\s*\/\/.*\n/gm, ''); });
-    };
-    return Promise.all([get('core.js'), get(target + '.js')]).then(function (m) {
-      return 'Modules.addCached("nbrjs",' + JSON.stringify(m[0]) + ');\n' +
-        'Modules.addCached("nbrjs/' + target + '",' + JSON.stringify(m[1]) + ');\n' +
-        (/globals\(\)/.test(program) ? '' : "require('nbrjs').globals();\n") +
-        program + (/\bstart\(/.test(program) ? '' : '\n' + START[target]) + '\n';
+  // program.js as a device file: the library comes from the board's Storage (or the IDE's
+  // module URL), so the file is just the program plus start().
+  var deviceFile = function (program, target, wifi) {
+    var st = START[target || 'ble'].join('\n');
+    if (wifi) st = st.replace("'SSID'", JSON.stringify(wifi.ssid)).replace("'PASSWORD'", JSON.stringify(wifi.password));
+    return (/globals\(\)/.test(program) ? '' : "require('nbrjs').globals();\n") + program.trim() +
+      (/\bstart\(/.test(program) ? '' : '\n\n' + st) + '\n';
+  };
+  var SRC = (document.querySelector('script[src$="core.js"]') || {}).src || new URL('../src/core.js', location.href).href;
+  var HERE = document.currentScript && document.currentScript.src;
+  var loadDevice = function () {
+    return window.Device ? Promise.resolve() : new Promise(function (ok, ko) {
+      var sc = document.createElement('script');
+      sc.src = new URL('device.js', HERE || location.href);
+      sc.onload = ok; sc.onerror = function () { ko(new Error('device.js not found')); };
+      document.head.appendChild(sc);
     });
   };
 
@@ -124,17 +129,28 @@
       '<button data-a="reset" title="Reset network and state">Reset</button>' +
       '<label>range <input data-a="range" type="range" min="0.8" max="3" step="0.1"></label>' +
       '<label>speed <input data-a="speed" type="range" min="1" max="30" step="1"></label>' +
-      '<button data-a="export" title="File ready for the Espruino Web IDE, target ble">Espruino ↗</button>' +
+      '<button data-a="export" title="Run program.js on a Puck.js or ESP32">Sul dispositivo ↗</button>' +
       '<span class="pg-round"></span></div>' +
       '<div class="pg-main"><div class="pg-editors">' +
       '<textarea class="pg-code" data-file="program" spellcheck="false" aria-label="program.js"></textarea>' +
       '<textarea class="pg-code" data-file="config" spellcheck="false" aria-label="config.js" hidden></textarea></div>' +
       '<canvas aria-label="Network"></canvas></div>' +
       '<div class="pg-status" role="status"></div><div class="pg-info"></div>' +
-      '<dialog class="pg-export"><p>Paste into the <a href="https://www.espruino.com/ide/" target="_blank" rel="noopener">Espruino Web IDE</a> ' +
-      '(right-hand editor), then Upload. Same program, <code>target: \'ble\'</code>.</p>' +
+      '<dialog class="pg-export"><h3>Sul dispositivo</h3>' +
+      '<p>Lo stesso <b>program.js</b>, su una rete vera. La prima volta installa anche la libreria nella memoria della scheda.</p>' +
+      '<div class="pg-form"><label>Rete <select data-d="target"><option value="ble">Bluetooth: Puck.js, ESP32</option>' +
+      '<option value="udp">WiFi: ESP32</option></select></label>' +
+      '<label data-d="wifi" hidden>WiFi <input data-d="ssid" placeholder="nome rete" autocomplete="off"> ' +
+      '<input data-d="pass" type="password" placeholder="password" autocomplete="off"></label>' +
+      '<label><input type="checkbox" data-d="save"> Salva: riparte da solo all\'accensione</label></div>' +
+      '<div class="pg-dialog-bar"><span class="pg-dev-status" role="status"></span>' +
+      '<button data-a="up-ble">Carica via Bluetooth</button><button data-a="up-usb">Carica via USB</button></div>' +
+      '<pre class="pg-dev-log" hidden></pre>' +
+      '<details><summary>Con l\'Espruino Web IDE</summary><p>In <i>Settings → Communications → Module URL</i> aggiungi ' +
+      '<code class="pg-modurl"></code>, poi incolla questo file nell\'editor e premi Upload.</p>' +
       '<textarea readonly spellcheck="false"></textarea>' +
-      '<div class="pg-dialog-bar"><button data-a="copy">Copy</button><button data-a="close">Close</button></div></dialog>';
+      '<div class="pg-dialog-bar"><button data-a="copy">Copia</button></div></details>' +
+      '<div class="pg-dialog-bar"><button data-a="close">Chiudi</button></div></dialog>';
     var q = function (s) { return el.querySelector(s); };
     var progEl = q('[data-file=program]'), confEl = q('[data-file=config]'), canvas = q('canvas');
     var status = q('.pg-status'), info = q('.pg-info'), roundEl = q('.pg-round');
@@ -325,15 +341,47 @@
     q('[data-a=reset]').onclick = reset;
     range.oninput = function () { net.range = +range.value; draw(); };
 
-    var dialog = q('dialog'), exported = q('dialog textarea');
-    q('[data-a=export]').onclick = function () {
-      exportForEspruino(progEl.value).then(function (text) {
-        exported.value = text;
-        dialog.showModal();
-      }, function (e) {
-        setStatus('export: ' + e.message + ' (serve the site over http, e.g. python3 -m http.server)', true);
-      });
+    // Device dialog: upload over Bluetooth or USB, or a file for the Espruino IDE.
+    var dialog = q('dialog'), exported = q('dialog textarea'), d = function (n) { return q('[data-d=' + n + ']'); };
+    var devStatus = q('.pg-dev-status'), devLog = q('.pg-dev-log');
+    var file = function () {
+      var t = d('target').value;
+      return deviceFile(progEl.value, t, t === 'udp' && d('ssid').value ? { ssid: d('ssid').value, password: d('pass').value } : null);
     };
+    var refresh = function () { d('wifi').hidden = d('target').value !== 'udp'; exported.value = file(); };
+    d('target').onchange = refresh;
+    d('ssid').oninput = d('pass').oninput = refresh;
+    q('.pg-modurl').textContent = new URL('../modules', SRC).href;
+    q('[data-a=export]').onclick = function () {
+      refresh();
+      q('[data-a=up-ble]').disabled = !navigator.bluetooth;
+      q('[data-a=up-usb]').disabled = !navigator.serial;
+      if (!navigator.bluetooth && !navigator.serial) devStatus.textContent = 'Serve Chrome o Edge (Web Bluetooth / Web Serial)';
+      dialog.showModal();
+    };
+    ['ble', 'usb'].forEach(function (kind) {
+      q('[data-a=up-' + kind + ']').onclick = function () {
+        var lines = [], link;
+        var say = function (t) { devStatus.textContent = t; };
+        devLog.hidden = true;
+        loadDevice().then(function () {
+          return Device.connect(kind, function (l) { lines.push(l); }, function () {});
+        }).then(function (l) {
+          link = l;
+          return link.upload(file(), d('save').checked, say);
+        }).then(function () {
+          say('in esecuzione su ' + link.name);
+          // A connected Puck does not advertise: let go, after a moment to catch errors.
+          setTimeout(function () {
+            link.close();
+            if (lines.length) { devLog.textContent = lines.slice(-12).join('\n'); devLog.hidden = false; }
+          }, 2000);
+        }, function (e) {
+          say(e.name === 'NotFoundError' ? '' : 'errore: ' + e.message);
+          if (link) link.close();
+        });
+      };
+    });
     q('[data-a=copy]').onclick = function () { navigator.clipboard.writeText(exported.value); };
     q('[data-a=close]').onclick = function () { dialog.close(); };
 
@@ -384,5 +432,5 @@
     return { reset: reset, attach: attach, program: function () { return progEl.value; } };
   };
 
-  window.Playground = { mount: mount, exportFor: exportForEspruino };
+  window.Playground = { mount: mount, deviceFile: deviceFile };
 })();

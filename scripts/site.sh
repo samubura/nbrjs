@@ -4,8 +4,8 @@
 set -e
 cd "$(dirname "$0")/.."
 rm -rf _site
-mkdir -p _site/modules/nbrjs
+mkdir -p _site
 cp -r web src _site/
-cp src/core.js _site/modules/nbrjs.js
-cp src/ble.js src/host.js _site/modules/nbrjs/
+# Minified for devices (needs devDependencies: npm ci). Served as <site>/modules/nbrjs.js, nbrjs/ble.js...
+node scripts/bundle.js --modules _site/modules
 printf '<!doctype html>\n<meta http-equiv="refresh" content="0; url=web/">\n<a href="web/">NbrJS</a>\n' > _site/index.html

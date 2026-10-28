@@ -5,7 +5,8 @@ var MAGIC = 'N';
 
 // Usually reached through require('nbrjs').start(program, {target: 'udp', ...}), once WiFi is up.
 // opts: {period ms (1000), ttl s (3 periods), port (4210), address ('255.255.255.255'),
-//        id (from getSerial()), sensors: (id) => ({...}), onResult: (value, id) => ...,
+//        wifi: {ssid, password} to connect first, id (from getSerial()),
+//        sensors: (id) => ({...}), onResult: (value, id) => ...,
 //        socket: a dgram socket to use instead of a new one}
 exports.start = function (program, opts) {
   opts = opts || {};
@@ -14,6 +15,10 @@ exports.start = function (program, opts) {
   var id = opts.id || (typeof getSerial === 'function' ? getSerial() : Math.random().toString(36)).replace(/\W/g, '').slice(-6);
   var dev = A.device(id), inbox = {}, seen = {};
   var now = function () { return typeof getTime === 'function' ? getTime() : Date.now() / 1000; };
+
+  if (opts.wifi) require('Wifi').connect(opts.wifi.ssid, { password: opts.wifi.password }, function (e) {
+    if (e) console.log('nbrjs: WiFi ' + e);
+  });
 
   // Datagram: MAGIC + sender id + ' ' + JSON message.
   var sock = opts.socket || require('dgram').createSocket({ type: 'udp4', reuseAddr: true });
