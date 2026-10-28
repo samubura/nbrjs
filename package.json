@@ -1,17 +1,34 @@
 {
   "name": "nbrjs",
   "version": "0.0.0",
-  "private": true,
   "description": "Minimal aggregate computing core (eXchange Calculus) for JavaScript and Espruino",
+  "license": "Apache-2.0",
+  "author": "Samuele Burattini",
   "exports": {
     ".": "./src/core.js",
     "./sim": "./src/sim.js",
     "./ble": "./src/ble.js"
   },
+  "files": [
+    "src",
+    "examples",
+    "scripts/bundle.js",
+    "NOTICE"
+  ],
   "scripts": {
     "test": "node test/test.js",
     "test:espruino": "sh scripts/espruino-test.sh",
-    "bundle": "node scripts/bundle.js"
+    "bundle": "node scripts/bundle.js",
+    "site": "sh scripts/site.sh"
   },
-  "keywords": ["aggregate-computing", "field-calculus", "exchange-calculus", "espruino"]
+  "keywords": [
+    "aggregate-computing",
+    "field-calculus",
+    "exchange-calculus",
+    "espruino",
+    "puck.js",
+    "esp32",
+    "ble",
+    "swarm"
+  ]
 }
