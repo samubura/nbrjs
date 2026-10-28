@@ -1,0 +1,12 @@
+{
+  "name": "nbrjs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Minimal aggregate computing core (eXchange Calculus) for JavaScript and Espruino",
+  "main": "src/core.js",
+  "scripts": {
+    "test": "node test/test.js",
+    "test:espruino": "sh scripts/espruino-test.sh"
+  },
+  "keywords": ["aggregate-computing", "field-calculus", "exchange-calculus", "espruino"]
+}
