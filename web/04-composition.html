@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Composing functions · NbrJS</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>4 · Composing functions</h1>
+<p class="lead">An aggregate function is a plain JavaScript function: pass it around, compose it, reuse it.</p>
+
+<h2>Broadcast: spreading a value</h2>
+<p>The gradient tells you <em>how far</em> the source is. Share a value along with the distance, and every node also learns <em>what</em> its nearest source says. The shared value is a pair <code>[distance, value]</code>: a plain array, since Espruino has no destructuring.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0,39">
+<script type="text/plain">
+var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
+  n.zip(nbrSense('range'), (p, r) => [p[0] + r, p[1]])
+   .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
+
+// Each node shows the id of its nearest source: a Voronoi partition.
+var program = () => broadcast(sense('source'), id())[1];
+</script>
+</div>
+<p>One colour per distinct value: each region "belongs" to a source. Add sources and watch the regions reorganise.</p>
+
+<h2>Blocks built on blocks</h2>
+<p>Once you have <code>broadcast</code>, a lot of things take one line. For example the distance between two special nodes, known to the whole network: node <code>B</code> computes its distance from <code>A</code> with a gradient, then broadcasts it.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0">
+<script type="text/plain">
+var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
+var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
+  n.zip(nbrSense('range'), (p, r) => [p[0] + r, p[1]])
+   .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
+
+// A is the source, B is node 35
+var program = () => broadcast(id() === '35', gradient(sense('source')))[1];
+</script>
+</div>
+<p>Drag node 35 or the source: the whole network updates the value. Each function keeps its own messages, so two blocks never get mixed up, even when they use the same operators.</p>
+
+<h2>The standard library</h2>
+<p>The common blocks are ready-made in <code>nbrjs/lib</code>, available in every example on this site:</p>
+<ul>
+  <li><code>hopsTo(source)</code>, <code>distanceTo(source, metric)</code>: gradients;</li>
+  <li><code>broadcast(source, value)</code>: the value of the nearest source;</li>
+  <li><code>collectSum(distance, value)</code>: sums values towards the source;</li>
+  <li><code>isLeader(radius)</code>: spread-out leaders; <code>networkMax(v)</code>, <code>networkMin(v)</code>;</li>
+  <li><code>neighbourCount()</code>, <code>rounds()</code>, <code>countdown(n)</code>, <code>minId(field)</code>.</li>
+</ul>
+<div class="pg-embed" data-nodes="50" data-sources="">
+<script type="text/plain">
+// Leaders about 3 apart, and each node shows the leader it belongs to.
+var program = () => broadcast(isLeader(3), id());
+</script>
+</div>
+<p>On a device you load it with <code>require('nbrjs/lib').globals()</code>; the playground does it for you when the program uses it.</p>
+
+<h2>Try it</h2>
+<p class="task">1. Broadcast the source's round counter (<code>rep</code>): far nodes see older numbers. How much older, compared to the distance?</p>
+<p class="task">2. Count the nodes that can reach the source, and show the count everywhere.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0">
+<script type="text/plain">
+var program = () => broadcast(sense('source'), id());
+</script>
+</div>
+<details><summary>Solutions</summary>
+<pre><code>var program = () => {
+  var clock = rep(0, (c) => c + 1);
+  return clock - broadcast(sense('source'), clock);  // delay: about the hops from the source
+};
+
+var program = () => {
+  var source = sense('source');
+  return broadcast(source, collectSum(hopsTo(source), 1));
+};</code></pre>
+</details>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
+<script src="../src/lib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
+<script src="../src/align.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

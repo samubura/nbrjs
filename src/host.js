@@ -7,12 +7,14 @@ var A = require('nbrjs');
 exports.start = function (program, opts) {
   opts = opts || {};
   var id = opts.id || 'puck', dev = A.device(id);
-  // The PC sends print(nbrjsRound('{"inbox":{...},"nbr":{...}}')) and reads 'NBR{"id":..,"v":..,"m":..}'.
+  // The PC sends print(nbrjsRound('{"inbox":{...},"nbr":{...}}')) and reads
+  // 'NBR{"id":..,"v":value,"m":message,"s":sensor readings}'.
   var round = function (json) {
     var q = A.decode(json || '{}');
-    var r = dev.round(program, q.inbox || {}, opts.sensors ? opts.sensors(id) : {}, q.nbr || {});
+    var s = opts.sensors ? opts.sensors(id) : {};
+    var r = dev.round(program, q.inbox || {}, s, q.nbr || {});
     if (opts.onResult) opts.onResult(r.value, id);
-    return 'NBR' + A.encode({ id: id, v: r.value, m: r.message });
+    return 'NBR' + A.encode({ id: id, v: r.value, m: r.message, s: s });
   };
   global.nbrjsRound = round;
   return { id: id, round: round, stop: function () { delete global.nbrjsRound; } };

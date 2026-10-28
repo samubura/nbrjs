@@ -194,7 +194,7 @@ check('udp with positions keeps neighbours within range', ru2.value, ['r2', 5]);
 var host = A.start(() => nbr(1).sum(), { target: 'host' });
 var line1 = nbrjsRound(A.encode({ inbox: { 7: { x0: [1] } }, nbr: {} }));
 host.stop();
-check('host answers the PC with one line', line1, 'NBR{"id":"puck","v":1,"m":{"x0":[1]}}');
+check('host answers the PC with one line', line1, 'NBR{"id":"puck","v":1,"m":{"x0":[1]},"s":{}}');
 
 console.log(failed ? failed + ' FAILED' : 'ALL OK');
 if (failed && typeof process !== 'undefined' && process.exit) process.exit(1);

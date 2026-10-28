@@ -131,3 +131,4 @@ details summary { cursor: pointer; font-weight: 600; }
 .pg-dev-log { font-size: 12px; max-height: 10em; overflow: auto; }
 .pg-export details { margin-top: 14px; }
 .pg-dialog-bar button:disabled { opacity: .5; cursor: default; }
+.readings { font-family: var(--mono); font-size: 14px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; margin: 14px 0 0; }

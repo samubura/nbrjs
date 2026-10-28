@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · Rounds and state · NbrJS</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>1 · Rounds and state</h1>
+<p class="lead">Every device runs the same program, over and over. Each run is a <b>round</b>.</p>
+
+<h2>A device's loop</h2>
+<p>In every round a device does the same three things:</p>
+<ol>
+  <li>reads its <b>sensors</b> and the latest <b>messages</b> from its neighbours;</li>
+  <li>runs the program, which produces a <b>value</b> (the device's output) and a <b>message</b>;</li>
+  <li>broadcasts the message to whoever is listening.</li>
+</ol>
+<p>The simulator runs rounds in lockstep for simplicity. Real devices each keep their own pace, and aggregate programs work all the same.</p>
+<p>The program is step 2: a function with no arguments, called <code>program</code>. This one shows each device's identifier:</p>
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="">
+<script type="text/plain">
+var program = () => id();
+</script>
+</div>
+
+<h2>Remembering: <code>rep</code></h2>
+<p>The program starts from scratch every round: local variables do not survive. For <b>state</b> use <code>rep(initial, f)</code>: in the first round <code>f</code> gets the initial value, then always the result of the previous round.</p>
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="">
+<script type="text/plain">
+// Counts rounds: 1, 2, 3, ...
+var program = () => rep(0, (c) => c + 1);
+</script>
+</div>
+<p><b>Reset</b> restarts the network from scratch. Hover a node: its message is <code>{}</code>, because <code>rep</code> is local memory and sends nothing to the neighbours.</p>
+<div class="note">This is real JavaScript, in the subset that runs on Espruino: arrow functions, ternaries, <code>Math</code>, arrays and objects are fine; destructuring, spread and default parameters are not.</div>
+
+<h2>Try it</h2>
+<p class="task">1. A blinker: every node alternates <code>true</code> and <code>false</code> each round.</p>
+<p class="task">2. A countdown from 10 that stops at 0.</p>
+<p class="task">3. Each node starts from its own id (as a number: <code>+id()</code>) and counts up from there.</p>
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="">
+<script type="text/plain">
+// Your solution here
+var program = () => rep(false, (b) => b);
+</script>
+</div>
+<details><summary>Solutions</summary>
+<pre><code>var program = () => rep(false, (b) => !b);
+
+var program = () => rep(10, (c) => Math.max(c - 1, 0));
+
+var program = () => rep(+id(), (c) => c + 1);</code></pre>
+</details>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
+<script src="../src/lib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
+<script src="../src/align.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

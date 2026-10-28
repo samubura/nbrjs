@@ -1,33 +1,34 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Demo Puck.js · NbrJS</title>
+<title>Puck.js demo · NbrJS</title>
 <link rel="icon" href="logo.svg">
 <link rel="stylesheet" href="style.css">
 <main class="page">
-<h1>Demo: un Puck.js e il PC</h1>
-<p class="lead">Hai un solo Puck.js? Qui diventa un nodo di una rete simulata nel browser. Il programma gira davvero sul Puck; i vicini sono virtuali.</p>
+<h1>Demo: one Puck.js and your PC</h1>
+<p class="lead">Only one Puck.js? Here it joins a network simulated in the browser. The program really runs on the Puck, with its button, light and temperature sensors; its neighbours are virtual.</p>
 
 <ol>
-  <li>Chiudi l'Espruino Web IDE, o disconnettilo: il Puck accetta una connessione alla volta.</li>
-  <li><b>Connetti</b> e scegli il Puck (Chrome o Edge).</li>
-  <li><b>Carica sul Puck</b>: installa la libreria e il programma, in pochi secondi.</li>
-  <li>Premi il <b>pulsante</b> del Puck: diventa una sorgente. I LED mostrano a quanti salti si trova dalla sorgente più vicina: rosso 0, verde 1, blu 2.</li>
-  <li>Trascina il nodo <b>Puck</b> nella rete, o clicca altri nodi per aggiungere sorgenti, e guarda cambiare i LED.</li>
+  <li>Close the Espruino Web IDE, or disconnect it: the Puck accepts one connection at a time.</li>
+  <li><b>Connect</b> and pick the Puck (Chrome or Edge).</li>
+  <li>Choose an example and press <b>Upload to Puck</b>: it installs the library and the program in a few seconds.</li>
+  <li>Play with the real Puck: press its button, cover it, warm it in your hand. Drag the <b>Puck</b> node around the network and watch its LEDs.</li>
 </ol>
 <div class="demo-bar">
-  <button id="connect">Connetti</button>
-  <button id="upload" disabled>Carica sul Puck</button>
-  <span id="link-status" role="status">non connesso</span>
+  <button id="connect">Connect</button>
+  <button id="upload" disabled>Upload to Puck</button>
+  <span id="link-status" role="status">not connected</span>
 </div>
+<p id="readings" class="readings" hidden></p>
 <div id="pg"></div>
-<details id="console-box"><summary>Console del Puck</summary><pre id="console"></pre></details>
+<details id="console-box"><summary>Puck console</summary><pre id="console"></pre></details>
 
-<h2>Come funziona</h2>
-<p>Sul Puck il programma parte con <code>target: 'host'</code>: invece di usare la radio da solo, aspetta il PC. A ogni round la pagina gli manda i messaggi dei vicini simulati che ha nel raggio; il Puck esegue il round e risponde con il suo valore e il suo messaggio, che i vicini ricevono al round successivo. Per il programma non c'è differenza con una rete vera.</p>
-<p>Se modifichi <code>program.js</code>, ricaricalo sul Puck: i nodi si capiscono solo se eseguono lo stesso programma.</p>
-<div class="note">Questa demo prova il tuo programma sull'interprete vero e il dialogo con altri nodi. La radio fra due schede, cioè il target <code>ble</code>, si prova con almeno due dispositivi.</div>
+<h2>How it works</h2>
+<p>On the Puck the program starts with <code>target: 'host'</code>: instead of using the radio by itself, it waits for the PC. Every round the page sends it the messages of the simulated neighbours in range; the Puck runs the round with its own sensors and answers with its value and message, which the neighbours get in the next round. To the program, it is a real network.</p>
+<p>The Puck reads <code>sense('source')</code> (its button toggles it), <code>sense('light')</code> (0 dark to 1 bright) and <code>sense('temp')</code> (°C). The simulated nodes get the same sensors from <b>config.js</b>. The LEDs show the Puck's value: red 0, green 1 or <code>true</code>, blue 2.</p>
+<p>After changing <code>program.js</code>, upload again: devices only understand each other when they run the same program.</p>
+<div class="note">This demo tests your program on the real interpreter and in conversation with other nodes. The radio between two boards, the <code>ble</code> target, needs at least two devices.</div>
 </main>
 <script src="../src/core.js"></script>
 <script src="../src/sim.js"></script>
@@ -40,22 +41,28 @@
 <script src="site.js"></script>
 <script>
 (function () {
-  var pg = Playground.mount(document.getElementById('pg'), {
-    tabs: true,
-    program: "var program = () => share(Infinity, (d) => sense('source') ? 0 : d.min() + 1);",
-    config: [
-      "// The simulated neighbours. The Puck joins as node 'puck' once connected.",
-      'return {',
-      "  target: 'sim',",
-      '  period: 300,',
-      "  nodes: 24, layout: 'random', range: 1.5,",
-      '  sources: [0], obstacles: [],',
-      '  sensors: (id, x, y, round) => ({})',
-      '};'
-    ].join('\n')
-  });
+  // Simulated neighbours with the Puck's sensors: some light, room temperature.
+  var NEIGHBOURS = [
+    "// The simulated neighbours, with the same sensors as the Puck. It joins as node 'puck'.",
+    'return {',
+    "  target: 'sim',",
+    '  period: 300,',
+    "  nodes: 24, layout: 'random', range: 1.5,",
+    '  sources: [], obstacles: [],',
+    '  sensors: (id, x, y, round) => ({ light: 0.5, temp: 22 + (+id % 4) })',
+    '};'
+  ].join('\n');
+  var demos = [
+    ['Button: the Puck is a source', "// Press the Puck's button: it becomes a source. Its LEDs show its hops.\nvar program = () => hopsTo(sense('source'));"],
+    ['Cover the Puck to make it a source', "// Dark is a source: cover the Puck with your hand. Click nodes to add simulated sources.\nvar program = () => hopsTo(sense('source') || sense('light') < 0.05);"],
+    ['Warmest around', "// true where a node is warmer than all its neighbours: hold the Puck to warm it up.\nvar program = () => sense('temp') >= nbr(sense('temp')).max();"],
+    ["Spread the Puck's light", "// Press the button: the Puck becomes a source and every node shows the light it measures.\nvar program = () => broadcast(sense('source'), sense('light'));"],
+    ['Leaders', "// Spread-out leaders: the Puck's LED is green when it is one.\nvar program = () => isLeader(2);"]
+  ].map(function (d) { return { name: d[0], program: d[1], config: NEIGHBOURS }; });
+
+  var pg = Playground.mount(document.getElementById('pg'), { tabs: true, presets: demos });
   var $ = function (id) { return document.getElementById(id); };
-  var status = $('link-status'), log = $('console'), link = null;
+  var status = $('link-status'), log = $('console'), readings = $('readings'), link = null, puck = null;
   var say = function (t) { status.textContent = t; };
   var print = function (l) {
     log.textContent = (log.textContent + l + '\n').split('\n').slice(-40).join('\n');
@@ -63,33 +70,40 @@
   };
   if (!Device.bluetooth) {
     $('connect').disabled = true;
-    say('Web Bluetooth non disponibile: usa Chrome o Edge, da https:// o localhost');
+    say('Web Bluetooth is not available: use Chrome or Edge, on https:// or localhost');
   }
+  // What the Puck measured in its last round.
+  setInterval(function () {
+    var s = puck && puck.sensors;
+    readings.hidden = !s;
+    if (s) readings.textContent = 'Puck: button ' + (s.source ? 'on' : 'off') + ' · light ' + s.light + ' · ' + s.temp + ' °C';
+  }, 500);
 
   $('connect').onclick = function () {
     if (link) { link.close(); return; }
     Device.connect('ble', print, function () {
-      link = null;
+      link = puck = null;
       pg.attach(null);
-      $('connect').textContent = 'Connetti';
+      $('connect').textContent = 'Connect';
       $('upload').disabled = true;
-      say('disconnesso');
+      say('disconnected');
     }).then(function (l) {
       link = l;
-      pg.attach(link.device(link.name || 'Puck'));
-      $('connect').textContent = 'Disconnetti';
+      puck = link.device(link.name || 'Puck');
+      pg.attach(puck);
+      $('connect').textContent = 'Disconnect';
       $('upload').disabled = false;
-      say('connesso a ' + link.name + ': carica il programma');
-    }, function (e) { say(e.message); });
+      say('connected to ' + link.name + ': upload a program');
+    }, function (e) { say(e.name === 'NotFoundError' ? 'not connected' : e.message); });
   };
 
   $('upload').onclick = function () {
     $('upload').disabled = true;
-    say('carico...');
+    say('uploading...');
     link.upload(Playground.deviceFile(pg.program(), 'host'), false, say).then(function () {
-      say('in esecuzione su ' + link.name + ': premi il pulsante');
+      say('running on ' + link.name);
     }, function (e) {
-      say('caricamento fallito: ' + e.message);
+      say('upload failed: ' + e.message);
     }).then(function () { $('upload').disabled = !link; });
   };
 })();

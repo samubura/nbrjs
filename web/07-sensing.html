@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Sensing and acting · NbrJS</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>7 · Sensing and acting</h1>
+<p class="lead">An aggregate program reads the world through sensors and changes it through actuators. Neither lives inside the program: the configuration connects them.</p>
+
+<h2>Inputs: <code>sense</code> and <code>nbrSense</code></h2>
+<p><code>sense(name)</code> returns a value the device reads at the start of each round. Where it comes from depends on where the program runs:</p>
+<ul>
+  <li>in the simulator, from <b>config.js</b>: <code>source</code>, <code>obstacle</code>, <code>x</code>, <code>y</code>, plus whatever its <code>sensors(id, x, y, round)</code> returns;</li>
+  <li>on a device, from the <code>sensors()</code> function you pass to <code>start</code>: a button, a light sensor, a battery level, a robot's distance sensor.</li>
+</ul>
+<p><code>nbrSense(name)</code> is a field: one reading per neighbour, measured by the platform. <code>nbrSense('range')</code> is the distance to each neighbour: exact in the simulator, from positions over WiFi, a rough estimate from signal strength over Bluetooth, where <code>nbrSense('rssi')</code> also gives the raw dBm.</p>
+<p>Here config.js provides a <code>temp</code> sensor: a heat source moving around the network. Each node checks whether it is the warmest among its neighbours. Open the <b>config.js</b> tab to see the environment.</p>
+<div class="pg-embed">
+<script type="text/plain">
+// true where the node is warmer than all its neighbours
+var program = () => sense('temp') >= nbr(sense('temp')).max();
+</script>
+<script type="text/plain" data-file="config">
+// The simulated environment: a heat source that moves over time.
+return {
+  target: 'sim',
+  period: 200,
+  nodes: 60, layout: 'random', range: 1.5,
+  sources: [],
+  sensors: (id, x, y, round) => {
+    var hx = 4 + 3 * Math.cos(round / 40), hy = 4 + 3 * Math.sin(round / 40);
+    return { temp: Math.round(30 - Math.hypot(x - hx, y - hy) * 3) };
+  }
+};
+</script>
+</div>
+
+<h2>Outputs: the program's value</h2>
+<p>The program returns a value every round, and <code>onResult(value, id)</code> turns it into action: an LED, a motor, a message on the console. Keep the program free of side effects and let <code>onResult</code> act: the same program then runs unchanged in the simulator, and a round that is computed again does no harm.</p>
+<pre><code>start(program, {
+  target: 'ble',
+  period: 500,
+  sensors: () => ({ source: BTN1.read(), light: Puck.light() }),
+  onResult: (hops) => LED1.write(hops === 0)
+});</code></pre>
+<p>When the output has several parts, return an object and use each part in <code>onResult</code>: <code>{ led: ..., speed: ... }</code>.</p>
+
+<h2>A robot example</h2>
+<p>A swarm of robots on WiFi, each one knowing its position. They gather around the robot whose button was pressed: each robot moves towards the neighbour that is closer to the target.</p>
+<pre><code>var program = () => {
+  var dist = distanceTo(sense('target'));
+  var next = minId(nbr(dist), dist);                 // the neighbour closer to the target
+  var where = nbr(sense('pos'));                     // everyone shares its position
+  return { dist: dist, towards: next === null ? null : where.at(next) };
+};
+
+start(program, {
+  target: 'udp',
+  wifi: { ssid: 'robots', password: '...' },
+  position: () => odometry.position(),              // [x, y], from the robot's own localisation
+  range: 1.5,                                       // neighbours within 1.5 m
+  sensors: () => ({ target: BTN1.read(), pos: odometry.position() }),
+  onResult: (r) => r.towards ? drive.towards(r.towards) : drive.stop()
+});</code></pre>
+<p><code>odometry</code> and <code>drive</code> stand for your robot's code: NbrJS decides where to go, your robot knows how to get there.</p>
+
+<h2>Reacting to events</h2>
+<p>Rounds run every <code>period</code> milliseconds. For a quicker reaction, call a round yourself when something happens:</p>
+<pre><code>var net = start(program, { target: 'ble', period: 2000, sensors: () => ({ source: BTN1.read() }) });
+setWatch(() => net.round(), BTN1, { edge: 'both', repeat: true, debounce: 30 });</code></pre>
+
+<h2>Try it</h2>
+<p class="task">1. Change the environment in config.js: two heat sources instead of one.</p>
+<p class="task">2. Return the hops from the warmest node instead of a boolean.</p>
+<div class="pg-embed">
+<script type="text/plain">
+var program = () => sense('temp') >= nbr(sense('temp')).max();
+</script>
+<script type="text/plain" data-file="config">
+return {
+  target: 'sim',
+  period: 200,
+  nodes: 60, layout: 'random', range: 1.5,
+  sources: [],
+  sensors: (id, x, y, round) => {
+    var hx = 4 + 3 * Math.cos(round / 40), hy = 4 + 3 * Math.sin(round / 40);
+    return { temp: Math.round(30 - Math.hypot(x - hx, y - hy) * 3) };
+  }
+};
+</script>
+</div>
+<details><summary>Solutions</summary>
+<pre><code>sensors: (id, x, y, round) => {
+  var a = 30 - Math.hypot(x - 2, y - 2) * 3, b = 30 - Math.hypot(x - 6, y - 5) * 3;
+  return { temp: Math.round(Math.max(a, b)) };
+}
+
+var program = () => hopsTo(sense('temp') >= nbr(sense('temp')).max());</code></pre>
+</details>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
+<script src="../src/lib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
+<script src="../src/align.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

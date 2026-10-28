@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Course · NbrJS</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>Aggregate computing, step by step</h1>
+<p class="lead">Eight short chapters. Each one introduces an idea, shows it running on a simulated network, and ends with exercises.</p>
+
+<h2>The idea</h2>
+<p>Usually you program one device at a time: what it sends, to whom, how it reacts. With <b>aggregate computing</b> you describe what <em>the whole network</em> should compute: a <b>field</b>, one value per device, such as the distance from a point or the number of neighbours. Every device runs the same program, and the runtime takes care of the messages.</p>
+<p>The theory behind it is the <b>field calculus</b>, now generalised as the <b>eXchange Calculus (XC)</b>: the model of ScaFi, FCPP and Collektive. There are only a few operators; everything else is built by composing functions.</p>
+
+<h2>The simulator</h2>
+<p>Every chapter has simulated networks like this one. The editor holds the program: change it and the network restarts with the new code.</p>
+<div class="pg-embed" data-nodes="30" data-sources="0" data-height="280">
+<script type="text/plain">
+var program = () => share(Infinity, (d) => sense('source') ? 0 : d.min() + 1);
+</script>
+</div>
+<ul>
+  <li><b>Click</b> a node to switch its <code>source</code> sensor on or off; <b>shift+click</b> for <code>obstacle</code>.</li>
+  <li><b>Drag</b> a node to move it; <b>range</b> is how far two nodes can be and still be neighbours.</li>
+  <li><b>Hover</b> a node to see its value and the message it sends, with its size over Bluetooth.</li>
+</ul>
+
+<h2>Chapters</h2>
+<ol>
+  <li><a href="01-rounds.html">Rounds and state</a>: how a program runs, and <code>rep</code>.</li>
+  <li><a href="02-neighbours.html">Neighbours and fields</a>: <code>nbr</code>, and reducing a field to a value.</li>
+  <li><a href="03-gradient.html">The gradient</a>: <code>share</code> and a first distributed algorithm.</li>
+  <li><a href="04-composition.html">Composing functions</a>: reusable blocks and the standard library.</li>
+  <li><a href="05-branch.html">Alignment and branches</a>: what happens around an <code>if</code>.</li>
+  <li><a href="06-xc.html">xc</a>: a different message for each neighbour.</li>
+  <li><a href="07-sensing.html">Sensing and acting</a>: inputs, outputs and the world around the program.</li>
+  <li><a href="08-devices.html">On devices</a>: the same code on Puck.js and ESP32.</li>
+</ol>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
+<script src="../src/lib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
+<script src="../src/align.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

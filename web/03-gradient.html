@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · The gradient · NbrJS</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>3 · The gradient</h1>
+<p class="lead">The "hello world" of aggregate computing: every device works out its distance from the nearest source, and nobody knows the whole network.</p>
+
+<h2>Shared state: <code>share</code></h2>
+<p><code>share(initial, (n) =&gt; ...)</code> combines <code>rep</code> and <code>nbr</code>: like <code>rep</code> it remembers a value across rounds, and it also <b>shares</b> it with the neighbours. The function gets <code>n</code>, the field of the neighbours' latest values, and returns the device's new value.</p>
+<p>A gradient in hops is a local rule: "if I am a source I am 0, otherwise 1 more than my closest neighbour".</p>
+<div class="pg-embed" data-nodes="40" data-sources="0">
+<script type="text/plain">
+var program = () => share(Infinity, (d) => sense('source') ? 0 : d.min() + 1);
+</script>
+</div>
+<p>Press <b>Reset</b> and watch the information travel one hop per round. A node with no neighbours stays at <code>∞</code>: the minimum of an empty field is <code>Infinity</code>.</p>
+
+<h2>Real distances</h2>
+<p>Adding the distance to each neighbour (<code>nbrSense('range')</code>) to its value gives a distance in metres instead of hops. Wrapped in a function, it becomes a <b>reusable block</b>.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0">
+<script type="text/plain">
+var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
+
+var program = () => gradient(sense('source'));
+</script>
+</div>
+<p>Try adding a second source, moving nodes, then <b>removing</b> a source. When distances shrink the network adapts quickly; when they must <b>grow</b>, they climb slowly, a little per round. This is the known <em>rising value problem</em>: nodes bounce stale values off each other. More robust gradients exist (BIS, SVD, ULT), built from the same pieces.</p>
+<div class="note">Why <code>share</code> and not <code>rep</code> + <code>nbr</code>? The classic field calculus gradient uses <code>rep</code> and <code>nbr</code>, but then every value waits one extra round before reaching the neighbours. <code>share</code>, which comes with XC, shares the result at once: the gradient converges about twice as fast.</div>
+
+<h2>Try it</h2>
+<p class="task">1. Write the <code>rep</code> + <code>nbr</code> version and compare how fast it converges after a Reset.</p>
+<p class="task">2. A "zone": <code>true</code> for the nodes within 2 hops of a source.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0">
+<script type="text/plain">
+var hops = (src) => share(Infinity, (d) => src ? 0 : d.min() + 1);
+
+var program = () => hops(sense('source'));
+</script>
+</div>
+<details><summary>Solutions</summary>
+<pre><code>var program = () => rep(Infinity, (d) => {
+  var m = nbr(d).min() + 1;   // outside the ternary: everyone runs it, the source too
+  return sense('source') ? 0 : m;
+});
+
+var hops = (src) => share(Infinity, (d) => src ? 0 : d.min() + 1);
+var program = () => hops(sense('source')) &lt;= 2;</code></pre>
+<p>In the first one, <code>nbr</code> has to stay outside the ternary. Inside it, only the non-source nodes would run it, and the source would never share its 0: chapter 5 explains why.</p>
+</details>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
+<script src="../src/lib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
+<script src="../src/align.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

@@ -1,62 +1,59 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Domini e branch</title>
+<title>5 · Alignment and branches · NbrJS</title>
 <link rel="icon" href="logo.svg">
 <link rel="stylesheet" href="style.css">
 <div class="layout">
 <nav id="toc"></nav>
 <main>
-<h1>5 · Domini e branch</h1>
-<p class="lead">Quando parti diverse della rete devono fare cose diverse, serve dividere il <b>dominio</b>: chi parla con chi.</p>
+<h1>5 · Alignment and branches</h1>
+<p class="lead">Devices only exchange values computed by the same piece of the program. Around an <code>if</code>, this needs care, and NbrJS takes care of it.</p>
 
-<h2>L'allineamento</h2>
-<p>Ogni operatore aggregato ha un <b>nome</b> dato dalla sua posizione nel programma: il primo è <code>x0</code>, il secondo <code>x1</code>, e così via. Due nodi scambiano valori solo sullo stesso nome: si dice che sono <b>allineati</b>. È ciò che permette di comporre blocchi senza che si confondano.</p>
+<h2>Alignment</h2>
+<p>Every aggregate operator gets a <b>name</b> from its position in the program: the first is <code>x0</code>, the second <code>x1</code>, and so on. Two devices exchange values only under the same name: they are <b>aligned</b>. This is what lets you compose blocks without them interfering.</p>
 
-<h2>Il problema dell'<code>if</code></h2>
-<p>In questa linea i nodi 3 e 4 sono ostacoli (in nero, shift+click per cambiarli). Vogliamo che gli ostacoli condividano 100 fra loro e gli altri 1 fra loro, e che ognuno mostri il massimo che vede. Con un <code>if</code> (qui un ternario):</p>
+<h2>What goes wrong with a plain <code>if</code></h2>
+<p>On this line nodes 3 and 4 are obstacles (in black, shift+click to change them). Obstacles should share 100 among themselves, the others 1, and each shows the largest value it sees. With alignment switched <b>off</b>, as it would be in plain JavaScript:</p>
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-obstacles="3,4" data-align="off">
+<script type="text/plain">
+var program = () => sense('obstacle') ? nbr(100).max() : nbr(1).max();
+</script>
+</div>
+<p>Nodes 2 and 5 show 100: <b>wrong</b>. Both <code>nbr</code> calls are the first operator of the program, so both are called <code>x0</code>: to the devices they are the same thing, and values leak across the border.</p>
+
+<h2>What NbrJS does</h2>
+<p>Before running your program, the playground and the device upload <b>rewrite</b> every <code>if</code>, <code>?:</code>, <code>&amp;&amp;</code> and <code>||</code> that wraps aggregate code into a <code>branch</code>. The same program as above, with alignment on, as everywhere else on this site:</p>
 <div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-obstacles="3,4">
 <script type="text/plain">
 var program = () => sense('obstacle') ? nbr(100).max() : nbr(1).max();
 </script>
 </div>
-<p>I nodi 2 e 5 mostrano 100: <b>sbagliato</b>. Entrambi i <code>nbr</code> sono il primo operatore del programma, quindi si chiamano tutti e due <code>x0</code>: per i nodi sono la stessa cosa, e i valori si mescolano attraverso il confine.</p>
+<p>Now nodes 2 and 5 show 1. <code>branch(condition, () =&gt; ..., () =&gt; ...)</code> runs one side and puts the condition in the name: the operators become <code>b0.1/x0</code> and <code>b0.0/x0</code>. Devices that took different sides are no longer aligned, and the network splits into two separate <b>domains</b>. Hover a node to see the names in its message.</p>
+<p>Named functions get the same treatment: two different functions never share messages, even when one variable holds either of them.</p>
+<div class="note">The rewrite happens in the tools: the playground, its device upload and <code>scripts/bundle.js</code>. Code typed straight into the Espruino console is not rewritten: there, write <code>branch(...)</code> yourself around aggregate code.</div>
 
-<h2>La soluzione: <code>branch</code></h2>
-<p><code>branch(condizione, () =&gt; ..., () =&gt; ...)</code> esegue uno dei due rami e mette la condizione nel nome: gli operatori diventano <code>b0.1/x0</code> e <code>b0.0/x0</code>. Chi ha preso un ramo diverso non è più allineato, e la rete si divide in due <b>domini</b> separati.</p>
-<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-obstacles="3,4">
-<script type="text/plain">
-var program = () => branch(sense('obstacle'), () => nbr(100).max(), () => nbr(1).max());
-</script>
-</div>
-<p>Ora i nodi 2 e 5 mostrano 1. Passa sopra un nodo per vedere i nomi nel messaggio. È la stessa regola di ScaFi: <b>attorno a operatori aggregati si usa <code>branch</code></b>; un <code>if</code> o un ternario va bene solo per valori locali.</p>
-
-<h2>Un gradiente che aggira gli ostacoli</h2>
-<p>Con <code>branch</code> gli ostacoli escono dal calcolo: il gradiente li aggira.</p>
+<h2>A gradient that goes around obstacles</h2>
+<p>With a branch, obstacles leave the computation, and the gradient flows around them.</p>
 <div class="pg-embed" data-nodes="49" data-sources="0" data-obstacles="3,10,17,24,31,38">
 <script type="text/plain">
-var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
-
-var program = () => branch(sense('obstacle'), () => null, () => gradient(sense('source')));
+var program = () => sense('obstacle') ? null : distanceTo(sense('source'));
 </script>
 </div>
 
-<h2>Prova tu</h2>
-<p class="task">1. Togli il <code>branch</code> dall'ultimo esempio, usando un ternario: cosa succede vicino agli ostacoli, e perché?</p>
-<p class="task">2. Due mondi separati: i nodi con x &lt; 3 calcolano il gradiente, gli altri contano i propri vicini.</p>
+<h2>Try it</h2>
+<p class="task">1. Two separate worlds: nodes with x &lt; 3 compute the gradient, the others count their neighbours.</p>
+<p class="task">2. Write the obstacle gradient with an explicit <code>branch</code>, as you would in the Espruino console.</p>
 <div class="pg-embed" data-nodes="49" data-sources="0">
 <script type="text/plain">
-var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
-
-var program = () => gradient(sense('source'));
+var program = () => distanceTo(sense('source'));
 </script>
 </div>
-<details><summary>Soluzioni</summary>
-<p>1. Con <code>sense('obstacle') ? null : gradient(...)</code> gli ostacoli non eseguono <code>share</code> e non mandano <code>x0</code>, quindi qui il risultato sembra corretto. Ma basta un'altra operazione aggregata nel ramo degli ostacoli per riprodurre il mescolamento visto sopra: <code>branch</code> rende la separazione una garanzia, non una coincidenza.</p>
-<pre><code>var program = () => branch(sense('x') &lt; 3,
-  () => gradient(sense('source')),
-  () => nbr(1).sum());</code></pre>
+<details><summary>Solutions</summary>
+<pre><code>var program = () => sense('x') &lt; 3 ? distanceTo(sense('source')) : neighbourCount();
+
+var program = () => branch(sense('obstacle'), () => null, () => distanceTo(sense('source')));</code></pre>
 </details>
 <footer id="pager"></footer>
 </main>

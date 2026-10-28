@@ -1,19 +1,20 @@
 // Site chrome: header, course chapters, footer, code colours, and a playground for every .pg-embed.
 (function () {
   var COURSE = [
-    ['corso.html', 'Introduzione'],
-    ['01-round.html', '1 · Round e stato'],
-    ['02-nbr.html', '2 · Vicini e campi'],
-    ['03-gradiente.html', '3 · Il gradiente'],
-    ['04-composizione.html', '4 · Comporre funzioni'],
-    ['05-branch.html', '5 · Domini e branch'],
-    ['06-xc.html', '6 · xc: un messaggio per vicino'],
-    ['07-dispositivi.html', '7 · Sui dispositivi']
+    ['course.html', 'Introduction'],
+    ['01-rounds.html', '1 · Rounds and state'],
+    ['02-neighbours.html', '2 · Neighbours and fields'],
+    ['03-gradient.html', '3 · The gradient'],
+    ['04-composition.html', '4 · Composing functions'],
+    ['05-branch.html', '5 · Alignment and branches'],
+    ['06-xc.html', '6 · xc: one message per neighbour'],
+    ['07-sensing.html', '7 · Sensing and acting'],
+    ['08-devices.html', '8 · On devices']
   ];
-  var SECTIONS = [['corso.html', 'Corso'], ['playground.html', 'Playground'], ['esp32.html', 'ESP32'], ['puck.html', 'Demo Puck.js']];
+  var SECTIONS = [['course.html', 'Course'], ['playground.html', 'Playground'], ['esp32.html', 'ESP32'], ['puck.html', 'Puck.js demo']];
   var here = location.pathname.split('/').pop() || 'index.html';
   var cur = COURSE.findIndex(function (s) { return s[0] === here; });
-  var section = cur >= 0 ? 'corso.html' : here;
+  var section = cur >= 0 ? 'course.html' : here;
 
   var header = document.createElement('header');
   header.className = 'site-header';
@@ -34,12 +35,12 @@
   // Course pages: the chapters on the side (a drawer on phones) and prev/next at the bottom.
   var toc = document.getElementById('toc');
   if (toc) {
-    toc.innerHTML = '<h2>Corso</h2><ol>' + COURSE.map(function (s, i) {
+    toc.innerHTML = '<h2>Course</h2><ol>' + COURSE.map(function (s, i) {
       return '<li><a href="' + s[0] + '"' + (i === cur ? ' aria-current="page"' : '') + '>' + s[1] + '</a></li>';
     }).join('') + '</ol>';
     var btn = document.createElement('button'), shade = document.createElement('div');
     btn.className = 'icon-btn toc-btn';
-    btn.textContent = '☰ Capitoli';
+    btn.textContent = '☰ Chapters';
     shade.className = 'backdrop';
     var close = function () { document.body.classList.remove('toc-open'); };
     btn.onclick = function () { document.body.classList.toggle('toc-open'); };

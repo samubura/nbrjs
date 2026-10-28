@@ -16,7 +16,7 @@
   var HW = { setWatch: function () {}, BTN: PIN, BTN1: PIN, LED1: PIN, LED2: PIN, LED3: PIN, D0: PIN, D2: PIN };
 
   var DEFAULT_CONFIG = [
-    "// The simulated network. On real boards, see 'Sul dispositivo'.",
+    "// The simulated network. For real boards, see 'To device'.",
     'return {',
     "  target: 'sim',",
     '  period: 200,',
@@ -50,9 +50,10 @@
       "setWatch(() => { source = !source; }, BTN1, { edge: 'rising', repeat: true, debounce: 50 });",
       'start(program, {',
       "  target: 'host',",
-      '  sensors: () => ({ source: source }),',
-      '  // the LEDs show small numbers: 0 red, 1 green, 2 blue',
-      '  onResult: (v) => { LED1.write(v === 0); LED2.write(v === 1); LED3.write(v === 2); }',
+      "  // the Puck's sensors, read in program.js with sense(name)",
+      '  sensors: () => ({ source: source, light: Math.round(Puck.light() * 100) / 100, temp: Math.round(E.getTemperature()) }),',
+      '  // LEDs: true green; small numbers 0 red, 1 green, 2 blue',
+      '  onResult: (v) => { LED1.write(v === 0); LED2.write(v === 1 || v === true); LED3.write(v === 2); }',
       '});']
   };
 
@@ -151,28 +152,28 @@
       '<button data-a="reset" title="Reset network and state">Reset</button>' +
       '<label>range <input data-a="range" type="range" min="0.8" max="3" step="0.1"></label>' +
       '<label>speed <input data-a="speed" type="range" min="1" max="30" step="1"></label>' +
-      '<button data-a="export" title="Run program.js on a Puck.js or ESP32">Sul dispositivo ↗</button>' +
+      '<button data-a="export" title="Run program.js on a Puck.js or ESP32">To device ↗</button>' +
       '<span class="pg-round"></span></div>' +
       '<div class="pg-main"><div class="pg-editors">' +
       '<textarea class="pg-code" data-file="program" spellcheck="false" aria-label="program.js"></textarea>' +
       '<textarea class="pg-code" data-file="config" spellcheck="false" aria-label="config.js" hidden></textarea></div>' +
       '<canvas aria-label="Network"></canvas></div>' +
       '<div class="pg-status" role="status"></div><div class="pg-info"></div>' +
-      '<dialog class="pg-export"><h3>Sul dispositivo</h3>' +
-      '<p>Lo stesso <b>program.js</b>, su una rete vera. La prima volta installa anche la libreria nella memoria della scheda.</p>' +
-      '<div class="pg-form"><label>Rete <select data-d="target"><option value="ble">Bluetooth: Puck.js, ESP32</option>' +
+      '<dialog class="pg-export"><h3>To device</h3>' +
+      '<p>The same <b>program.js</b>, on a real network. The first time, the library is installed on the board too.</p>' +
+      '<div class="pg-form"><label>Network <select data-d="target"><option value="ble">Bluetooth: Puck.js, ESP32</option>' +
       '<option value="udp">WiFi: ESP32</option></select></label>' +
-      '<label data-d="wifi" hidden>WiFi <input data-d="ssid" placeholder="nome rete" autocomplete="off"> ' +
+      '<label data-d="wifi" hidden>WiFi <input data-d="ssid" placeholder="network name" autocomplete="off"> ' +
       '<input data-d="pass" type="password" placeholder="password" autocomplete="off"></label>' +
-      '<label><input type="checkbox" data-d="save"> Salva: riparte da solo all\'accensione</label></div>' +
+      '<label><input type="checkbox" data-d="save"> Save: start by itself at power-up</label></div>' +
       '<div class="pg-dialog-bar"><span class="pg-dev-status" role="status"></span>' +
-      '<button data-a="up-ble">Carica via Bluetooth</button><button data-a="up-usb">Carica via USB</button></div>' +
+      '<button data-a="up-ble">Upload via Bluetooth</button><button data-a="up-usb">Upload via USB</button></div>' +
       '<pre class="pg-dev-log" hidden></pre>' +
-      '<details><summary>Con l\'Espruino Web IDE</summary><p>In <i>Settings → Communications → Module URL</i> aggiungi ' +
-      '<code class="pg-modurl"></code>, poi incolla questo file nell\'editor e premi Upload.</p>' +
+      '<details><summary>With the Espruino Web IDE</summary><p>In <i>Settings → Communications → Module URL</i> add ' +
+      '<code class="pg-modurl"></code>, then paste this file in the editor and press Upload.</p>' +
       '<textarea readonly spellcheck="false"></textarea>' +
-      '<div class="pg-dialog-bar"><button data-a="copy">Copia</button></div></details>' +
-      '<div class="pg-dialog-bar"><button data-a="close">Chiudi</button></div></dialog>';
+      '<div class="pg-dialog-bar"><button data-a="copy">Copy</button></div></details>' +
+      '<div class="pg-dialog-bar"><button data-a="close">Close</button></div></dialog>';
     var q = function (s) { return el.querySelector(s); };
     var progEl = q('[data-file=program]'), confEl = q('[data-file=config]'), canvas = q('canvas');
     var status = q('.pg-status'), info = q('.pg-info'), roundEl = q('.pg-round');
@@ -309,7 +310,7 @@
           g.beginPath(); g.arc(p[0], p[1], 12, 0, 2 * Math.PI); g.stroke();
         }
         g.fillStyle = fg;
-        if (id in out) g.fillText(fmt(out[id]), p[0], p[1] + 23);
+        if (id in out && out[id] !== false) g.fillText(fmt(out[id]), p[0], p[1] + 23); // false: the muted colour says it
         if (remote && id === remote.id) {
           g.fillStyle = accent;
           g.fillText(remote.label || id, p[0], p[1] - 16);
@@ -319,11 +320,11 @@
       showInfo();
     };
     var showInfo = function () {
-      if (hover === null) { info.textContent = 'Click: sorgente · Shift+click: ostacolo · Trascina: sposta · Passa sopra: ispeziona'; return; }
+      if (hover === null) { info.textContent = 'Click: source · Shift+click: obstacle · Drag: move · Hover: inspect'; return; }
       var m = net.messages[hover] || '', n = 0;
       for (var id in pos) if (id !== hover && Math.hypot(pos[id][0] - pos[hover][0], pos[id][1] - pos[hover][1]) <= net.range) n++;
-      info.textContent = 'nodo ' + hover + ' · valore ' + JSON.stringify(out[hover]) + ' · ' + n + ' vicini · manda ' + m +
-        (m && window.nbrjsBle ? ' · via BLE ' + bleSize(m) + ' B' : '');
+      info.textContent = 'node ' + hover + ' · value ' + JSON.stringify(out[hover]) + ' · ' + n + ' neighbours · sends ' + m +
+        (m && window.nbrjsBle ? ' · over BLE ' + bleSize(m) + ' B' : '');
     };
 
     var pick = function (e) {
@@ -379,7 +380,7 @@
       refresh();
       q('[data-a=up-ble]').disabled = !navigator.bluetooth;
       q('[data-a=up-usb]').disabled = !navigator.serial;
-      if (!navigator.bluetooth && !navigator.serial) devStatus.textContent = 'Serve Chrome o Edge (Web Bluetooth / Web Serial)';
+      if (!navigator.bluetooth && !navigator.serial) devStatus.textContent = 'Needs Chrome or Edge (Web Bluetooth / Web Serial)';
       dialog.showModal();
     };
     ['ble', 'usb'].forEach(function (kind) {
@@ -393,14 +394,14 @@
           link = l;
           return link.upload(file(), d('save').checked, say);
         }).then(function () {
-          say('in esecuzione su ' + link.name);
+          say('running on ' + link.name);
           // A connected Puck does not advertise: let go, after a moment to catch errors.
           setTimeout(function () {
             link.close();
             if (lines.length) { devLog.textContent = lines.slice(-12).join('\n'); devLog.hidden = false; }
           }, 2000);
         }, function (e) {
-          say(e.name === 'NotFoundError' ? '' : 'errore: ' + e.message);
+          say(e.name === 'NotFoundError' ? '' : 'error: ' + e.message);
           if (link) link.close();
         });
       };

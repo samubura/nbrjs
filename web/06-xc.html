@@ -1,79 +1,72 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>xc, la primitiva</title>
+<title>6 · xc: one message per neighbour · NbrJS</title>
 <link rel="icon" href="logo.svg">
 <link rel="stylesheet" href="style.css">
 <div class="layout">
 <nav id="toc"></nav>
 <main>
-<h1>6 · xc: un messaggio per vicino</h1>
-<p class="lead"><code>nbr</code> e <code>share</code> mandano lo stesso valore a tutti. L'eXchange Calculus ha un'unica primitiva, <code>xc</code>, che può mandare a ogni vicino un valore diverso.</p>
+<h1>6 · xc: one message per neighbour</h1>
+<p class="lead"><code>nbr</code> and <code>share</code> send the same value to everyone. The eXchange Calculus has a single primitive, <code>xc</code>, which can send each neighbour a different value.</p>
 
-<h2>Come funziona</h2>
-<p><code>xc(iniziale, (n) =&gt; ...)</code>:</p>
+<h2>How it works</h2>
+<p><code>xc(initial, (n) =&gt; ...)</code>:</p>
 <ul>
-  <li><code>n</code> è il campo di ciò che ogni vicino ha mandato <b>a me</b>; <code>n.self</code> è ciò che mi sono mandato al round prima (all'inizio, <code>iniziale</code>);</li>
-  <li>se la funzione restituisce un <b>campo</b>, ogni vicino riceve il suo valore; un vicino nuovo, che non è nel campo, riceve il valore di default;</li>
-  <li>se restituisce un valore normale, lo ricevono tutti;</li>
-  <li><code>retsend(risultato, daInviare)</code> separa il valore restituito da quello trasmesso.</li>
+  <li><code>n</code> is the field of what each neighbour sent <b>to me</b>; <code>n.self</code> is what I sent myself last round (at the start, <code>initial</code>);</li>
+  <li>if the function returns a <b>field</b>, each neighbour gets its own value; a new neighbour, not in the field yet, gets the default;</li>
+  <li>if it returns a plain value, everyone gets it;</li>
+  <li><code>retsend(result, toSend)</code> separates the returned value from the one sent.</li>
 </ul>
-<p>Gli operatori visti finora sono casi particolari: <code>share</code> è <code>xc</code> che restituisce un valore normale, e <code>nbr(v)</code> è quasi <code>xc(v, (n) =&gt; retsend(n, v))</code>; l'unica differenza è che in <code>nbr</code> il <code>.self</code> è già il <code>v</code> di questo round.</p>
+<p>The operators so far are special cases: <code>share</code> is <code>xc</code> returning a plain value, and <code>nbr(v)</code> is almost <code>xc(v, (n) =&gt; retsend(n, v))</code>; the only difference is that in <code>nbr</code>, <code>.self</code> is already this round's <code>v</code>.</p>
 
-<h2>Età dei collegamenti</h2>
-<p>A ogni vicino rimando ciò che mi ha mandato, più uno. Ogni coppia di nodi tiene così un contatore privato che cresce finché il collegamento resiste. Ogni nodo mostra l'età del suo collegamento più recente: <b>trascina un nodo</b> in un altro punto e i suoi nuovi collegamenti ripartono da 1.</p>
+<h2>Link age</h2>
+<p>I send each neighbour back what it sent me, plus one. Every pair of nodes keeps a private counter that grows as long as the link lasts. Each node shows the age of its newest link: <b>drag a node</b> elsewhere and its new links restart from 1.</p>
 <div class="pg-embed" data-nodes="30" data-sources="">
 <script type="text/plain">
 var program = () => xc(0, (n) => n.map((x) => x + 1)).min();
 </script>
 </div>
-<p>Passa sopra un nodo: il messaggio ha la forma <code>[default, {id: valore}]</code>, un valore per ogni vicino. Via Bluetooth ogni vicino in più costa circa 3 byte.</p>
+<p>Hover a node: the message has the form <code>[default, {id: value}]</code>, one value per neighbour. Over Bluetooth, each extra neighbour costs about 3 bytes.</p>
 
-<h2>Collect: risalire il gradiente</h2>
-<p>Il blocco "inverso" del broadcast: raccogliere un'informazione verso la sorgente. Ogni nodo sceglie come <b>parent</b> il vicino più vicino alla sorgente e manda <em>solo a lui</em> la sua somma parziale; agli altri manda 0. La sorgente ottiene il numero di nodi che la raggiungono.</p>
+<h2>Collect: going up the gradient</h2>
+<p>The opposite of broadcast: gathering information towards the source. Each node picks as <b>parent</b> the neighbour closest to the source and sends its partial sum <em>to it only</em>; the others get 0. The source ends up with the number of nodes that reach it.</p>
 <div class="pg-embed" data-nodes="40" data-sources="0">
 <script type="text/plain">
-var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
-
 var collect = (dist, v) => {
-  var parent = nbr(dist).map((d, id) => [d, id])
-    .reduce((best, p) => p[0] < best[0] ? p : best, [dist, null])[1];
+  var parent = minId(nbr(dist), dist);
   return xc(0, (n) => {
     var total = n.sum(v);
     return retsend(total, n.map((x, id) => id === parent ? total : 0));
   });
 };
 
-var program = () => collect(gradient(sense('source')), 1);
+var program = () => collect(distanceTo(sense('source')), 1);
 </script>
 </div>
-<p>Con <code>nbr</code> o <code>share</code> dovresti mandare a tutti "il mio parent è X" e lasciare che ognuno filtri. Con <code>xc</code> il messaggio è già indirizzato.</p>
+<p>With <code>nbr</code> or <code>share</code> you would send everyone "my parent is X" and let each one filter. With <code>xc</code> the message is already addressed. The standard library's <code>collectSum</code> is exactly this function.</p>
 
-<h2>Prova tu</h2>
-<p class="task">1. Ogni nodo conta i propri figli: quanti vicini l'hanno scelto come parent.</p>
-<p class="task">2. Scrivi la tua <code>myShare(init, f)</code> usando solo <code>xc</code>, e usala nel gradiente.</p>
+<h2>Try it</h2>
+<p class="task">1. Each node counts its children: how many neighbours chose it as parent.</p>
+<p class="task">2. Write your own <code>myShare(init, f)</code> with <code>xc</code> only, and use it in the gradient.</p>
 <div class="pg-embed" data-nodes="40" data-sources="0">
 <script type="text/plain">
-var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
 var program = () => {
-  var dist = gradient(sense('source'));
-  var parent = nbr(dist).map((d, id) => [d, id])
-    .reduce((best, p) => p[0] < best[0] ? p : best, [dist, null])[1];
-  return parent;
+  var dist = distanceTo(sense('source'));
+  return minId(nbr(dist), dist);
 };
 </script>
 </div>
-<details><summary>Soluzioni</summary>
+<details><summary>Solutions</summary>
 <pre><code>var program = () => {
-  var dist = gradient(sense('source'));
-  var parent = nbr(dist).map((d, id) => [d, id])
-    .reduce((best, p) => p[0] &lt; best[0] ? p : best, [dist, null])[1];
+  var dist = distanceTo(sense('source'));
+  var parent = minId(nbr(dist), dist);
   return xc(0, (n) => retsend(n.sum(), n.map((x, id) => id === parent ? 1 : 0)));
 };
 
 var myShare = (init, f) => xc(init, (n) => f(n));</code></pre>
-<p>La seconda è identica a <code>share</code>: quando la funzione restituisce un valore normale, <code>xc</code> lo usa sia come risultato sia come messaggio.</p>
+<p>The second is identical to <code>share</code>: when the function returns a plain value, <code>xc</code> uses it both as result and as message.</p>
 </details>
 <footer id="pager"></footer>
 </main>

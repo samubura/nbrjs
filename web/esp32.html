@@ -1,77 +1,83 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NbrJS su ESP32</title>
+<title>NbrJS on ESP32</title>
 <link rel="icon" href="logo.svg">
 <link rel="stylesheet" href="style.css">
 <main class="page">
-<h1>NbrJS su ESP32</h1>
-<p class="lead">Dalla scheda appena tolta dalla scatola a più ESP32 che calcolano insieme, via Bluetooth o WiFi.</p>
+<h1>NbrJS on ESP32</h1>
+<p class="lead">From a board fresh out of the box to a group of ESP32s, robots or sensors, computing together over Bluetooth or WiFi.</p>
 
-<h2>Cosa serve</h2>
+<h2>What you need</h2>
 <ul>
-  <li>Una o più schede ESP32 classiche, per esempio ESP32-WROOM DevKit. Il firmware Espruino per ESP32 è pensato per questo chip; C3 e S3 non sono coperti dalla documentazione ufficiale.</li>
-  <li>Un cavo USB dati, non solo di ricarica.</li>
-  <li>Chrome o Edge, per caricare il firmware e i programmi dal browser.</li>
+  <li>One or more classic ESP32 boards, such as an ESP32-WROOM DevKit. Espruino's ESP32 firmware targets this chip; the official documentation does not cover C3 and S3.</li>
+  <li>A USB data cable, not a charge-only one.</li>
+  <li>Chrome or Edge, to flash the firmware and upload programs from the browser.</li>
 </ul>
 
-<h2>1. Installa Espruino</h2>
-<p>L'ESP32 esce di fabbrica senza Espruino: va installato una volta.</p>
+<h2>1. Install Espruino</h2>
+<p>ESP32 boards ship without Espruino: install it once.</p>
 <ol>
-  <li>Scarica il firmware per ESP32 dalla <a href="https://www.espruino.com/Download">pagina download di Espruino</a>: contiene <code>bootloader.bin</code>, <code>partitions_espruino.bin</code> ed <code>espruino_esp32.bin</code>.</li>
-  <li>Collega la scheda e caricali con lo <a href="https://www.espruino.com/Espressif+Flash">strumento online di Espruino</a>, oppure da terminale con <code>esptool</code>:</li>
+  <li>Download the ESP32 firmware from the <a href="https://www.espruino.com/Download">Espruino download page</a>. It contains <code>bootloader.bin</code>, <code>partitions_espruino.bin</code> and <code>espruino_esp32.bin</code>.</li>
+  <li>Connect the board and flash them with <a href="https://www.espruino.com/Espressif+Flash">Espruino's online tool</a>, or from a terminal with <code>esptool</code>:</li>
 </ol>
 <pre><code>esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 --after hard_reset \
   write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect \
   0x1000 bootloader.bin 0x8000 partitions_espruino.bin 0x10000 espruino_esp32.bin</code></pre>
-<p>Su Windows la porta è del tipo <code>COM3</code>, su macOS <code>/dev/cu.usbserial-…</code>. Per gli aggiornamenti successivi basta <code>0x10000 espruino_esp32.bin</code>.</p>
+<p>On Windows the port looks like <code>COM3</code>, on macOS like <code>/dev/cu.usbserial-…</code>. Later updates only need <code>0x10000 espruino_esp32.bin</code>.</p>
 
-<h2>2. Scegli la rete</h2>
-<p>Gli ESP32 possono parlarsi via Bluetooth o via WiFi. ESP-NOW, il protocollo diretto di Espressif, in Espruino non è disponibile.</p>
+<h2>2. Choose the network</h2>
+<p>ESP32 boards can talk over Bluetooth or WiFi. ESP-NOW, Espressif's direct protocol, is not available in Espruino.</p>
 <div class="features">
-  <div><h3>Bluetooth: <code>target: 'ble'</code></h3><p>Niente router: ogni scheda sente quelle vicine, come i Puck.js, con cui può stare nella stessa rete. Messaggi fino a 23 byte. Il segnale (<code>nbrSense('rssi')</code>) dice quanto è vicino ogni vicino.</p></div>
-  <div><h3>WiFi: <code>target: 'udp'</code></h3><p>Le schede si collegano allo stesso access point e si parlano in broadcast. Nessun limite pratico sui messaggi, e anche un PC con Node può entrare nella rete. Però tutte le schede connesse sono vicine fra loro.</p></div>
+  <div><h3>Bluetooth: <code>target: 'ble'</code></h3><p>No infrastructure: each board hears the ones nearby, Puck.js included, so the network follows the space. Messages up to 23 bytes. <code>nbrSense('range')</code> estimates distance from the signal; <code>minRssi</code> sets how far "near" is.</p></div>
+  <div><h3>WiFi: <code>target: 'udp'</code></h3><p>Boards join the same access point and broadcast to each other, with no practical limit on messages. Robots that know their position pass <code>position</code> and <code>range</code>, and get a spatial neighbourhood with real distances. A PC running Node can join too.</p></div>
 </div>
-<p>Spegni la radio che non usi: libera molta memoria per i tuoi programmi. Il comando riavvia la scheda e cancella il programma salvato.</p>
-<pre><code>ESP32.enableWifi(false);   // se usi il Bluetooth: circa 3900 variabili in più
-ESP32.enableBLE(false);    // se usi il WiFi: circa 1800 variabili in più</code></pre>
+<p>No router around? One ESP32 can be the access point for the others:</p>
+<pre><code>require('Wifi').startAP('swarm', { password: 'swarm-pass', authMode: 'wpa2' });</code></pre>
+<p>Turn off the radio you do not use: it frees a lot of memory for your programs. The command restarts the board and clears the saved program.</p>
+<pre><code>ESP32.enableWifi(false);   // on Bluetooth: about 3900 more variables
+ESP32.enableBLE(false);    // on WiFi: about 1800 more variables</code></pre>
 
-<h2>3. Carica il programma</h2>
-<p>Apri il <a href="playground.html">playground</a>, scrivi o scegli un programma e premi <b>Sul dispositivo ↗</b>:</p>
+<h2>3. Upload the program</h2>
+<p>Open the <a href="playground.html">playground</a>, write or pick a program, and press <b>To device ↗</b>:</p>
 <ol>
-  <li>scegli <b>Bluetooth</b> o <b>WiFi</b>; per il WiFi inserisci nome e password della rete;</li>
-  <li>spunta <b>Salva</b> se vuoi che il programma riparta a ogni accensione;</li>
-  <li><b>Carica via USB</b> e scegli la porta della scheda.</li>
+  <li>choose <b>Bluetooth</b> or <b>WiFi</b>, and for WiFi type the network name and password;</li>
+  <li>tick <b>Save</b> if the program should start at every power-up;</li>
+  <li>press <b>Upload via USB</b> and pick the board's port.</li>
 </ol>
-<p>La prima volta la pagina installa la libreria nella flash della scheda, poi carica il programma. Ripeti per ogni ESP32.</p>
-<p>Ecco il file che finisce sulla scheda con il WiFi; il pulsante <code>BOOT</code> è <code>BTN1</code> e il LED integrato <code>LED1</code>, ma sulle schede compatibili possono cambiare:</p>
+<p>The first time the page installs the library in the board's flash, then uploads the program. Repeat for each ESP32.</p>
+<p>This is the file that ends up on a WiFi robot. The <code>BOOT</code> button is <code>BTN1</code> and the on-board LED is <code>LED1</code>, though they can differ on compatible boards:</p>
 <pre><code>require('nbrjs').globals();
+require('nbrjs/lib').globals();
 
-var program = () => share(Infinity, (d) => sense('source') ? 0 : d.min() + 1);
+var program = () => hopsTo(sense('source'));
 
 start(program, {
   target: 'udp',
-  wifi: { ssid: 'NomeRete', password: '...' },
-  period: 1000,
+  wifi: { ssid: 'swarm', password: 'swarm-pass' },
+  position: () => myRobot.position(),   // [x, y] in metres, from your robot's localisation
+  range: 1.5,                           // neighbours within 1.5 m
+  period: 500,
   sensors: () => ({ source: BTN1.read() }),
-  onResult: (h, id) => { LED1.write(h === 0); console.log(id, h); }
+  onResult: (h, id) => LED1.write(h === 0)
 });</code></pre>
+<p>Without <code>position</code>, every board on the WiFi network is a neighbour of every other.</p>
 
-<h2>Con l'Espruino Web IDE</h2>
-<p>Se preferisci l'<a href="https://www.espruino.com/ide/">IDE di Espruino</a>:</p>
+<h2>With the Espruino Web IDE</h2>
+<p>If you prefer <a href="https://www.espruino.com/ide/">Espruino's IDE</a>:</p>
 <ol>
-  <li>in <i>Settings → Communications</i> imposta il <b>Baud Rate</b> a <b>115200</b>: l'ESP32 non usa il valore predefinito;</li>
-  <li>nello stesso pannello aggiungi a <b>Module URL</b>, separato da <code>|</code>, l'indirizzo dei moduli che trovi nella finestra <b>Sul dispositivo</b> del playground;</li>
-  <li>incolla il file nell'editor e premi Upload.</li>
+  <li>in <i>Settings → Communications</i> set the <b>Baud Rate</b> to <b>115200</b>: the ESP32 does not use the default;</li>
+  <li>in the same panel add to <b>Module URL</b>, separated by <code>|</code>, the modules address shown in the playground's <b>To device</b> dialog;</li>
+  <li>copy the file from that dialog, paste it in the editor and press Upload.</li>
 </ol>
 
-<h2>Se qualcosa non va</h2>
+<h2>When something goes wrong</h2>
 <ul>
-  <li><b>La scheda non compare fra le porte</b>: prova un altro cavo; alcune schede vogliono il driver CP210x o CH340.</li>
-  <li><b>Errori WiFi o riavvii</b>: spesso è l'alimentazione. Una porta USB scarsa o un regolatore debole non bastano quando il WiFi trasmette.</li>
-  <li><b>Le schede non si vedono via WiFi</b>: alcuni router isolano i client o filtrano il broadcast. Prova un hotspot, o una delle schede come access point.</li>
-  <li><b>"message is N bytes"</b> in console: via Bluetooth il messaggio non sta nei 23 byte. Riduci gli operatori o usa interi piccoli, oppure passa al WiFi.</li>
+  <li><b>The board does not show up as a port</b>: try another cable; some boards need the CP210x or CH340 driver.</li>
+  <li><b>WiFi errors or reboots</b>: often the power supply. A weak USB port or regulator is not enough when WiFi transmits.</li>
+  <li><b>Boards do not see each other on WiFi</b>: some routers isolate clients or filter broadcasts. Try a hotspot, or one ESP32 as access point.</li>
+  <li><b>"message is N bytes"</b> on the console: over Bluetooth the message does not fit in 23 bytes. Use fewer operators or small integers, or switch to WiFi.</li>
 </ul>
 </main>
 <script src="site.js"></script>

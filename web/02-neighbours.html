@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · Neighbours and fields · NbrJS</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>2 · Neighbours and fields</h1>
+<p class="lead">With <code>nbr(v)</code> each device sends <code>v</code> to its neighbours and gets theirs back.</p>
+
+<h2>One value per neighbour</h2>
+<p><code>nbr(v)</code> returns a <b>neighbouring field</b>: one value per neighbour, plus the device's own in <code>.self</code>. It is not a number, so you <b>reduce</b> it to a local value:</p>
+<ul>
+  <li><code>.sum()</code>, <code>.min()</code>, <code>.max()</code>: the usual reductions;</li>
+  <li><code>.reduce((acc, v) =&gt; ..., initial)</code>: like <code>Array.reduce</code>, and it takes <code>Math.min</code> or <code>Math.max</code> directly.</li>
+</ul>
+<p>Reductions <b>skip the device itself</b>: only neighbours count. Here is each node's number of neighbours; drag nodes around or change <b>range</b>.</p>
+<div class="pg-embed" data-nodes="30" data-sources="">
+<script type="text/plain">
+var program = () => nbr(1).sum();
+</script>
+</div>
+<p>Hover a node: it sends <code>{"x0":[1]}</code>. <code>x0</code> is the name of that <code>nbr</code> in the program, and devices only compare values with the same name. Chapter 5 is about these names.</p>
+
+<h2>Transforming and combining fields</h2>
+<ul>
+  <li><code>.map((v, id) =&gt; ...)</code> transforms each value;</li>
+  <li><code>.zip(other, (a, b) =&gt; ...)</code> combines two fields value by value;</li>
+  <li><code>nbrSense('range')</code> is a field the platform provides: the distance to each neighbour.</li>
+</ul>
+<div class="pg-embed" data-nodes="30" data-sources="">
+<script type="text/plain">
+// Distance to the closest neighbour
+var program = () => nbrSense('range').min();
+</script>
+</div>
+
+<h2>Try it</h2>
+<p class="task">1. The largest id among the neighbours (simulator ids are strings: use <code>+id()</code>).</p>
+<p class="task">2. "Am I a local leader?": <code>true</code> if my id is larger than every neighbour's.</p>
+<p class="task">3. The average x position of the neighbours (sensor <code>sense('x')</code>).</p>
+<div class="pg-embed" data-nodes="30" data-sources="">
+<script type="text/plain">
+var program = () => nbr(1).sum();
+</script>
+</div>
+<details><summary>Solutions</summary>
+<pre><code>var program = () => nbr(+id()).max();
+
+var program = () => nbr(+id()).max() &lt; +id();
+
+var program = () => nbr(sense('x')).sum() / nbr(1).sum();</code></pre>
+<p>The local leader works for isolated nodes too: <code>.max()</code> of an empty field is <code>-Infinity</code>.</p>
+</details>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
+<script src="../src/lib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
+<script src="../src/align.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

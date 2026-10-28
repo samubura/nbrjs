@@ -127,10 +127,10 @@
           await wait(300);
           var ids = needs(code);
           for (var i = 0; i < ids.length; i++) {
-            progress('installo ' + ids[i]);
+            progress('installing ' + ids[i]);
             await store(ids[i], ascii(await module(ids[i])));
           }
-          progress(save ? 'salvo il programma' : 'avvio il programma');
+          progress(save ? 'saving the program' : 'starting the program');
           if (save) {
             await store('.bootcde', ascii(code));
             await write('\x10load()\n');
@@ -153,7 +153,7 @@
         d.round = function (program, inbox, sensors, nbrSensors) {
           if (!busy && !link.uploading) {
             busy = true;
-            link.round(inbox, nbrSensors).then(function (r) { last = { value: r.v, message: r.m }; }, function () {})
+            link.round(inbox, nbrSensors).then(function (r) { last = { value: r.v, message: r.m }; d.sensors = r.s; }, function () {})
               .then(function () { busy = false; });
           }
           return last;

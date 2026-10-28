@@ -5,7 +5,8 @@
 [![CI](https://github.com/samubura/nbrjs/actions/workflows/ci.yml/badge.svg)](https://github.com/samubura/nbrjs/actions/workflows/ci.yml)
 
 Aggregate computing in JavaScript, with eXchange Calculus (XC) semantics. One program for the whole network,
-running in the browser, in Node, and on [Espruino](https://www.espruino.com/) boards such as Puck.js and ESP32.
+running in the browser, in Node, and on [Espruino](https://www.espruino.com/) boards: swarms of Puck.js, or ESP32 robots
+talking over Bluetooth or WiFi.
 
 ```js
 require('nbrjs').globals();
@@ -21,7 +22,7 @@ start(program, {
 });
 ```
 
-**[Website](https://samubura.github.io/nbrjs/web/)**: a [course](https://samubura.github.io/nbrjs/web/corso.html) (Italian),
+**[Website](https://samubura.github.io/nbrjs/web/)**: a [course](https://samubura.github.io/nbrjs/web/course.html),
 a [playground](https://samubura.github.io/nbrjs/web/playground.html) that also uploads to boards, and an
 [ESP32 guide](https://samubura.github.io/nbrjs/web/esp32.html).
 
@@ -41,6 +42,7 @@ a [playground](https://samubura.github.io/nbrjs/web/playground.html) that also u
 | `share(init, n => ...)` | state shared with the neighbours |
 | `branch(c, () => a, () => b)` | splits the network: the two sides do not see each other (`b` is optional) |
 | `align(key, () => ...)` | explicit alignment, for loops and dynamic structures |
+| `aggregate(name, fn)` | aligns calls by function: different functions never share messages |
 | `id()`, `sense(name)`, `nbrSense(name)` | device id, local sensor, per-neighbour sensor (a field) |
 | `start(program, config)` | runs the program on `config.target` |
 | `globals()` | puts the operators above in the global scope (Espruino has no destructuring) |
@@ -48,7 +50,14 @@ a [playground](https://samubura.github.io/nbrjs/web/playground.html) that also u
 Fields: `.self`, `.map((v, id) => ...)`, `.zip(other, (a, b) => ...)`, `.reduce((acc, v) => ..., init)`, `.min()`, `.max()`, `.sum()`.
 Reductions skip the device itself, so `Math.min` and `Math.max` work as reducers.
 
-As in ScaFi, a native `if` or `?:` around aggregate operators does not align them: use `branch`.
+**Plain control flow.** The playground, its device upload and `scripts/bundle.js` rewrite `if`, `?:`, `&&` and `||`
+around aggregate code into branches, and wrap named functions in `aggregate`
+([`src/align.js`](src/align.js), needs `acorn`). Code typed straight into the Espruino console is not rewritten:
+use `branch` there.
+
+**Standard library** (`require('nbrjs/lib').globals()`, opt-in): `hopsTo(source)`, `distanceTo(source, metric)`,
+`broadcast(source, value)`, `collectSum(distance, value)`, `isLeader(radius)`, `networkMax(v)`, `networkMin(v)`,
+`neighbourCount()`, `rounds()`, `countdown(n)`, `minId(field)`.
 
 ## Targets
 
@@ -56,8 +65,8 @@ All targets take `period` (ms), `sensors(id)` (values for `sense()`) and `onResu
 
 | target | where | options |
 |---|---|---|
-| `ble` | Puck.js, ESP32 | `ttl` (s). Neighbours are the boards heard recently; `nbrSense('rssi')` gives signal strength |
-| `udp` | ESP32, Node | `wifi: {ssid, password}`, `port`, `address`. Broadcast on the LAN: every device on it is a neighbour |
+| `ble` | Puck.js, ESP32 | `ttl` (s), `scan` (ms of listening per period, 400), `minRssi`, `txPower`. No infrastructure; `nbrSense('rssi')`, and `nbrSense('range')` estimated in metres |
+| `udp` | ESP32, Node | `wifi: {ssid, password}`, `position: () => [x, y]`, `range`, `port`, `address`. Broadcast over WiFi; with positions, neighbours are those within `range` |
 | `sim` | browser, Node | `nodes`, `layout` (`random`, `grid`, `line`), `range`; `nbrSense('range')` is the distance |
 | `host` | a board tethered to a PC | the PC runs the rounds and simulates the neighbours ([demo](https://samubura.github.io/nbrjs/web/puck.html)) |
 

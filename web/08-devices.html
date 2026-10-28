@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · On devices · NbrJS</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>8 · On devices</h1>
+<p class="lead">The program you wrote in the simulator runs as is on Puck.js and ESP32, with <a href="https://www.espruino.com/">Espruino</a>. Only where you start it changes.</p>
+
+<h2>Where it runs: <code>start</code></h2>
+<p>On a device the file ends with <code>start(program, config)</code>. The program does not know which network it runs on: <code>config.target</code> decides.</p>
+<pre><code>require('nbrjs').globals();
+
+var hops = (src) => share(Infinity, (d) => src ? 0 : d.min() + 1);
+var program = () => hops(sense('source'));
+
+start(program, {
+  target: 'ble',
+  period: 1000,
+  sensors: () => ({ source: BTN1.read() }),
+  onResult: (h) => LED1.write(h === 0)
+});</code></pre>
+<ul>
+  <li><code>'ble'</code>: Bluetooth Low Energy, on Puck.js and ESP32, with no router. No connections or pairing: every round the message goes into the advertising packet, and the neighbours are the devices heard recently (<code>ttl</code>). Devices listen for <code>scan</code> ms per period, which saves battery; <code>minRssi</code> ignores distant ones.</li>
+  <li><code>'udp'</code>: WiFi, on ESP32, through a router or one board acting as access point. With <code>position</code> and <code>range</code>, neighbours are the devices within range; without, everyone on the network is a neighbour.</li>
+  <li><code>'sim'</code>: the simulator, in the browser or in Node.</li>
+</ul>
+
+<h2>Small messages</h2>
+<p>An advertising packet has 23 usable bytes. Over Bluetooth, messages use a compact binary format: each operator costs 2 bytes plus its value, and an integer from 0 to 63 fits in a single byte. The gradient below sends 4 bytes: hover a node to see its message and size.</p>
+<div class="pg-embed" data-nodes="30" data-sources="0" data-height="280">
+<script type="text/plain">
+var program = () => hopsTo(sense('source'));
+</script>
+</div>
+<ul>
+  <li>Integers are cheaper than decimals, which become 32-bit floats (5 bytes).</li>
+  <li>With <code>xc</code>, each value specific to a neighbour adds about 3 bytes.</li>
+  <li>When a message is over 23 bytes, the device says so on its console and sends an empty one: neighbours ignore it until it fits again.</li>
+  <li>Over WiFi (<code>'udp'</code>) there is no such limit.</li>
+</ul>
+
+<h2>Uploading</h2>
+<p>From the <a href="playground.html">playground</a>, in Chrome or Edge: <b>To device ↗</b>, pick the network, then <b>Upload via Bluetooth</b> or <b>via USB</b>. The first time, the library is installed in the board's flash memory, where it runs without using much RAM; after that only the program travels. With <b>Save</b> the program starts by itself at every power-up.</p>
+<p>Prefer the <a href="https://www.espruino.com/ide/">Espruino Web IDE</a>? In <i>Settings → Communications → Module URL</i> add the modules address shown in the same dialog: <code>require('nbrjs')</code> then works like an official module. Copy the program from the dialog, which already has its <code>if</code>s aligned.</p>
+<p>For ESP32, from installing Espruino to choosing between Bluetooth and WiFi, see the <a href="esp32.html">ESP32 guide</a>. With a single Puck.js, the <a href="puck.html">Puck.js demo</a> makes it part of a simulated network.</p>
+
+<h2>Espruino's JavaScript</h2>
+<p>Espruino interprets the source directly and supports a subset of JavaScript:</p>
+<ul>
+  <li>yes: arrow functions, template literals, classes, <code>Math</code>, <code>JSON</code>, array methods;</li>
+  <li>no: destructuring, spread, default parameters, Map/Set, <code>for...of</code>, async;</li>
+  <li>no hoisting: define functions <b>before</b> using them (<code>var f = () =&gt; ...</code>).</li>
+</ul>
+<p>The browser simulator is more permissive: the examples on this site all stay within the subset, so they also run on a board.</p>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
+<script src="../src/lib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
+<script src="../src/align.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

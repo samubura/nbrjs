@@ -1,26 +1,26 @@
 // Playground examples: program.js (device code) and, when it matters, config.js (simulation).
 var PRESETS = [
-  { name: 'Gradiente (distanza)', program:
-`// Distanza dalla sorgente più vicina. Clicca un nodo per renderlo sorgente.
-// nbrSense('range') esiste solo nel simulatore: sui dispositivi usa i salti o l'RSSI.
+  { name: 'Gradient (distance)', program:
+`// Distance from the nearest source. Click a node to make it a source.
+// nbrSense('range') is the distance to each neighbour (estimated from the signal on BLE).
 var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
 
 var program = () => gradient(sense('source'));` },
 
-  { name: 'Gradiente (salti)', program:
-`// Salti dalla sorgente più vicina: non serve un sensore di distanza, gira uguale sui dispositivi.
+  { name: 'Gradient (hops)', program:
+`// Hops from the nearest source: no distance needed. Same as hopsTo() in the library.
 var hops = (src) => share(Infinity, (d) => src ? 0 : d.min() + 1);
 
 var program = () => hops(sense('source'));` },
 
-  { name: 'Contatore dei round (rep)', program:
+  { name: 'Round counter (rep)', program:
 `var program = () => rep(0, (c) => c + 1);` },
 
-  { name: 'Numero di vicini (nbr)', program:
+  { name: 'Neighbour count (nbr)', program:
 `var program = () => nbr(1).sum();` },
 
-  { name: 'Broadcast (sorgente più vicina)', program:
-`// Coppie [distanza, id sorgente]: ogni nodo scopre qual è la sorgente più vicina.
+  { name: 'Broadcast (nearest source)', program:
+`// [distance, source id] pairs: every node learns which source is nearest.
 var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
   n.zip(nbrSense('range'), (p, r) => [p[0] + r, p[1]])
    .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
@@ -34,11 +34,9 @@ var program = () => broadcast(sense('source'), id())[1];`,
   sources: [0, 7, 52], obstacles: []
 };` },
 
-  { name: 'Ostacoli (branch)', program:
-`// Shift+click su un nodo lo rende ostacolo: branch() lo toglie dal dominio del gradiente.
-var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
-
-var program = () => branch(sense('obstacle'), () => null, () => gradient(sense('source')));`,
+  { name: 'Obstacles (branch)', program:
+`// Shift+click makes a node an obstacle: the conditional takes it out of the gradient's domain.
+var program = () => sense('obstacle') ? null : distanceTo(sense('source'));`,
     config:
 `return {
   target: 'sim',
@@ -47,12 +45,12 @@ var program = () => branch(sense('obstacle'), () => null, () => gradient(sense('
   sources: [0], obstacles: [4, 12, 20, 28, 36, 44]
 };` },
 
-  { name: 'Punto caldo (sensori da config.js)', program:
-`// 'temp' arriva da config.js: una fonte di calore che si sposta nel tempo.
-// Ogni nodo controlla se è il più caldo fra i suoi vicini.
+  { name: 'Warmest spot (sensors from config.js)', program:
+`// 'temp' comes from config.js: a heat source moving over time.
+// Each node checks whether it is the warmest among its neighbours.
 var program = () => sense('temp') >= nbr(sense('temp')).max();`,
     config:
-`// L'ambiente simulato fornisce il sensore 'temp': una fonte di calore in movimento.
+`// The simulated environment provides the 'temp' sensor: a moving heat source.
 return {
   target: 'sim',
   period: 200,
@@ -64,9 +62,9 @@ return {
   }
 };` },
 
-  { name: 'Collect (xc, messaggi per vicino)', program:
-`// Conta i nodi che raggiungono ogni sorgente. Con xc ogni nodo manda la sua somma
-// parziale solo al parent (il vicino più vicino alla sorgente), e 0 a tutti gli altri.
+  { name: 'Collect (xc, per-neighbour messages)', program:
+`// Counts the nodes that reach each source. With xc each node sends its partial sum
+// only to its parent (the neighbour closest to the source), and 0 to everyone else.
 var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
 
 var collect = (dist, v) => {
@@ -80,8 +78,19 @@ var collect = (dist, v) => {
 
 var program = () => collect(gradient(sense('source')), 1);` },
 
-  { name: 'Età dei collegamenti (xc)', program:
-`// Ogni collegamento conta da quanti round esiste: rimando a ogni vicino quello che mi ha mandato, +1.
-// Trascina un nodo altrove: i suoi nuovi collegamenti ripartono da 1.
+  { name: 'Leaders and their areas (library)', program:
+`// Leaders about 3 apart; each node shows the leader it belongs to.
+var program = () => broadcast(isLeader(3), id());` },
+
+  { name: 'Count devices at the source (library)', program:
+`// Sums 1 per device towards the source, then shares the total with everyone.
+var program = () => {
+  var source = sense('source');
+  return broadcast(source, collectSum(hopsTo(source), 1));
+};` },
+
+  { name: 'Link age (xc)', program:
+`// Each link counts how many rounds it has lasted: I send each neighbour back what it sent me, +1.
+// Drag a node elsewhere: its new links start again from 1.
 var program = () => xc(0, (n) => n.map((x) => x + 1)).min();` }
 ];
