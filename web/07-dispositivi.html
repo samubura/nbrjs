@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sui dispositivi reali</title>
+<link rel="icon" href="logo.svg">
 <link rel="stylesheet" href="style.css">
 <div class="layout">
 <nav id="toc"></nav>
@@ -37,7 +38,8 @@ var program = () => share(Infinity, (d) => sense('source') ? 0 : d.min() + 1);
 <p>Il programma aggregato non sa dove gira. Lo decide <code>start(program, config)</code>, in base a <code>config.target</code>:</p>
 <ul>
   <li><code>'sim'</code>: il simulatore (qui nel browser o in Node), con <code>nodes</code>, <code>layout</code>, <code>range</code>;</li>
-  <li><code>'ble'</code>: Puck.js ed ESP32, con <code>period</code> e <code>ttl</code> (dopo quanti secondi un vicino muto viene dimenticato).</li>
+  <li><code>'ble'</code>: Puck.js ed ESP32, con <code>period</code> e <code>ttl</code> (dopo quanti secondi un vicino muto viene dimenticato);</li>
+  <li><code>'host'</code>: un dispositivo collegato al PC, che gli simula i vicini (la <a href="puck.html">demo Puck e PC</a>).</li>
 </ul>
 <p>I campi comuni sono <code>period</code>, <code>sensors(id)</code> (i valori letti con <code>sense()</code>) e <code>onResult(valore, id)</code>. Nel playground è la scheda <b>config.js</b>. Ecco il file completo per i dispositivi, <code>examples/hops.js</code>:</p>
 <pre><code>// Hop-count gradient on Puck.js or ESP32 (Espruino), over BLE.
@@ -72,6 +74,7 @@ start(program, {
   <li><b>Dal Web IDE, con i moduli online</b>: in <i>Settings → Communications → Module URL</i> aggiungi, separato da <code>|</code>, l'indirizzo <code>…/modules</code> di questo sito. Poi <code>require('nbrjs')</code> e <code>require('nbrjs/ble')</code> funzionano come i moduli ufficiali. Con questa strada scrivi esplicitamente <code>require('nbrjs/ble')</code>, perché l'IDE carica solo i moduli che vede nominati.</li>
   <li><b>Da riga di comando</b>: <code>npm run bundle -- examples/hops.js &gt; dist/hops.js</code> crea lo stesso file del pulsante.</li>
 </ol>
+<p>Hai un solo dispositivo? La <a href="puck.html">demo Puck e PC</a> lo collega al browser, che simula i vicini.</p>
 <p>Ripeti su almeno tre dispositivi e premi il pulsante su uno: i LED mostrano i salti (rosso 0, verde 1, blu 2). Il codice caricato senza <code>save()</code> resta in RAM: per ripartire basta togliere la batteria.</p>
 <div class="note">Su ESP32 il BLE dev'essere attivo nel firmware (<code>ESP32.enableBLE(true)</code>, poi riavvio). ESP-NOW non è esposto da Espruino, quindi Puck.js ed ESP32 si parlano via BLE.</div>
 

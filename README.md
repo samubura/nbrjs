@@ -1,3 +1,5 @@
+<img src="web/logo.svg" width="88" align="right" alt="NbrJS logo">
+
 # NbrJS
 
 Minimal aggregate computing with **eXchange Calculus (XC)** semantics, in plain JavaScript.
@@ -32,7 +34,7 @@ start(program, {
 | `branch(c, () => ..., () => ...)` | splits the domain: the two branches never see each other |
 | `align(key, () => ...)` | explicit alignment (loops, dynamic structures) |
 | `id()`, `sense(name)`, `nbrSense(name)` | device id, local sensor, per-neighbour sensor (field) |
-| `start(program, config)` | runs it on `config.target`: `'ble'` (`nbrjs/ble`) or `'sim'` (`nbrjs/sim`) |
+| `start(program, config)` | runs it on `config.target`: `'ble'` (`nbrjs/ble`), `'sim'` (`nbrjs/sim`) or `'host'` (`nbrjs/host`) |
 | `globals()` | the operators above as globals |
 | `device(id).round(program, inbox, sensors, nbrSensors)` | one round by hand → `{value, message}` |
 | `encode(msg)` / `decode(str)` | JSON that keeps `±Infinity` |
@@ -43,6 +45,7 @@ Reductions cover the aligned neighbours only (self excluded), so `Math.min`/`Mat
 Config, common to all targets: `period` (ms), `sensors(id)` → values for `sense()`, `onResult(value, id)`.
 `sim`: `nodes`, `layout` (`'random'`, `'grid'`, `'line'`), `range`, `pos`; `sensors(id, x, y, round)`.
 `ble`: `ttl` (s before a silent neighbour is dropped); `nbrSense('rssi')` gives signal strength.
+`host`: `id` (`'puck'`). A board tethered to a PC, which runs its rounds and plays its neighbours ([`web/puck.html`](web/puck.html)).
 
 ## Caveats
 
@@ -57,6 +60,8 @@ Config, common to all targets: `period` (ms), `sensors(id)` → values for `sens
 - **Web IDE modules**: add `<pages-url>/modules` to *Settings → Communications → Module URL*, then
   `require('nbrjs')` and `require('nbrjs/ble')` work like official modules.
 - **CLI**: `npm run bundle -- examples/hops.js > dist/hops.js` inlines the modules (and the target's) for upload.
+- **One board only?** The Puck + PC demo (`web/puck.html`, Chrome/Edge) uploads the program over Web Bluetooth
+  and makes the board one node of a simulated network.
 
 ## Develop
 
