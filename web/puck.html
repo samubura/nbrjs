@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo Puck e PC</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>Demo · un Puck e il PC</h1>
+<p class="lead">Con un solo dispositivo: il Puck.js è un nodo vero, i suoi vicini sono simulati qui nel browser. Il programma sul Puck è quello reale e gira sull'interprete Espruino.</p>
+
+<h2>Come funziona</h2>
+<p>Sul Puck il programma parte con <code>target: 'host'</code>: il dispositivo non usa la radio per conto suo, ma aspetta il PC. A ogni round la pagina gli manda, via Bluetooth, i messaggi dei vicini simulati che sono nel suo raggio; il Puck esegue un round e risponde con il suo valore e il suo messaggio, che i vicini ricevono al round dopo. Per il programma non cambia nulla: vede vicini, campi e messaggi come su una rete vera.</p>
+
+<h2>Prova</h2>
+<ol>
+  <li>Chiudi l'Espruino Web IDE, o disconnettilo: il Puck accetta una sola connessione.</li>
+  <li><b>Connetti</b> e scegli il Puck. Serve Chrome o Edge, con la pagina aperta da <code>https://</code> o da <code>localhost</code>.</li>
+  <li><b>Carica sul Puck</b>: installa <code>program.js</code> con il target <code>host</code> (pochi secondi; il codice resta in RAM finché non togli la batteria).</li>
+  <li>Premi il <b>pulsante</b> del Puck: diventa la sorgente, e il gradiente parte da lui. I LED mostrano i salti: rosso 0, verde 1, blu 2.</li>
+  <li>Trascina il nodo <b>Puck</b> vicino o lontano da una sorgente simulata (click su un nodo) e guarda cambiare i LED.</li>
+</ol>
+<div class="demo-bar">
+  <button id="connect">Connetti</button>
+  <button id="upload" disabled>Carica sul Puck</button>
+  <span id="link-status" role="status">non connesso</span>
+</div>
+<div id="pg"></div>
+<details id="console-box"><summary>Console del Puck</summary><pre id="console"></pre></details>
+
+<div class="note">Cosa prova questa demo: il core e il tuo programma sull'interprete vero, l'allineamento con altri nodi e il formato dei messaggi. Non prova la radio fra dispositivi (l'advertising BLE del target <code>ble</code>): per quella servono almeno due schede.</div>
+<p>Se modifichi <code>program.js</code>, ricaricalo sul Puck: i nodi allineano solo se eseguono lo stesso programma.</p>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="playground.js"></script>
+<script src="link.js"></script>
+<script src="site.js"></script>
+<script>
+(function () {
+  var pg = Playground.mount(document.getElementById('pg'), {
+    tabs: true,
+    program: "var program = () => share(Infinity, (d) => sense('source') ? 0 : d.min() + 1);",
+    config: [
+      "// The simulated neighbours. The Puck joins as node 'puck' once connected.",
+      'return {',
+      "  target: 'sim',",
+      '  period: 300,',
+      "  nodes: 24, layout: 'random', range: 1.5,",
+      '  sources: [0], obstacles: [],',
+      '  sensors: (id, x, y, round) => ({})',
+      '};'
+    ].join('\n')
+  });
+  var $ = function (id) { return document.getElementById(id); };
+  var status = $('link-status'), log = $('console'), link = null;
+  var say = function (t) { status.textContent = t; };
+  var print = function (l) {
+    log.textContent = (log.textContent + l + '\n').split('\n').slice(-40).join('\n');
+    log.scrollTop = log.scrollHeight;
+  };
+  if (!PuckLink.supported) {
+    $('connect').disabled = true;
+    say('Web Bluetooth non disponibile: usa Chrome o Edge, da https:// o localhost');
+  }
+
+  $('connect').onclick = function () {
+    if (link) { link.close(); return; }
+    PuckLink.connect(print, function () {
+      link = null;
+      pg.attach(null);
+      $('connect').textContent = 'Connetti';
+      $('upload').disabled = true;
+      say('disconnesso');
+    }).then(function (l) {
+      link = l;
+      pg.attach(link.device(link.name || 'Puck'));
+      $('connect').textContent = 'Disconnetti';
+      $('upload').disabled = false;
+      say('connesso a ' + link.name + ': carica il programma');
+    }, function (e) { say(e.message); });
+  };
+
+  $('upload').onclick = function () {
+    $('upload').disabled = true;
+    say('carico...');
+    Playground.exportFor(pg.program(), 'host').then(function (code) {
+      return link.upload(code);
+    }).then(function () {
+      say('in esecuzione su ' + link.name + ': premi il pulsante');
+    }, function (e) {
+      say('caricamento fallito: ' + e.message);
+    }).then(function () { $('upload').disabled = !link; });
+  };
+})();
+</script>

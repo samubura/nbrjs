@@ -22,7 +22,8 @@
     '};'
   ].join('\n');
 
-  var BLE_START = [
+  var START = {};
+  START.ble = [
     '',
     '// Same program, real network: only the config changed.',
     'start(program, {',
@@ -31,6 +32,18 @@
     "  // map the board's inputs to the names program.js reads with sense(), e.g. Puck.js button:",
     '  sensors: () => ({ source: BTN.read() }),',
     '  onResult: (v, id) => console.log(id, v)',
+    '});'
+  ].join('\n');
+  START.host = [
+    '',
+    '// Same program, neighbours played by the PC (puck.html): only the config changed.',
+    'var source = false;',
+    "setWatch(() => { source = !source; }, BTN, { edge: 'rising', repeat: true, debounce: 50 });",
+    'start(program, {',
+    "  target: 'host',",
+    '  sensors: () => ({ source: source }),',
+    '  // the LEDs show small numbers: 0 red, 1 green, 2 blue',
+    '  onResult: (v) => { LED1.write(v === 0); LED2.write(v === 1); LED3.write(v === 2); }',
     '});'
   ].join('\n');
 
@@ -79,20 +92,21 @@
     return 'hsl(' + hue(JSON.stringify(v)) + ',65%,55%)';
   };
 
-  // Upload-ready file for the Espruino Web IDE: modules inlined as the IDE does, target 'ble'.
+  // Upload-ready file for the Espruino Web IDE: modules inlined as the IDE does, target 'ble' (or 'host').
   var SRC = (document.querySelector('script[src$="core.js"]') || {}).src || '../src/core.js';
-  var exportForEspruino = function (program) {
+  var exportForEspruino = function (program, target) {
+    target = target || 'ble';
     var get = function (f) {
       return fetch(new URL(f, SRC)).then(function (r) {
         if (!r.ok) throw new Error(f + ': ' + r.status);
         return r.text();
       }).then(function (t) { return t.replace(/^\s*\/\/.*\n/gm, ''); });
     };
-    return Promise.all([get('core.js'), get('ble.js')]).then(function (m) {
+    return Promise.all([get('core.js'), get(target + '.js')]).then(function (m) {
       return 'Modules.addCached("nbrjs",' + JSON.stringify(m[0]) + ');\n' +
-        'Modules.addCached("nbrjs/ble",' + JSON.stringify(m[1]) + ');\n' +
+        'Modules.addCached("nbrjs/' + target + '",' + JSON.stringify(m[1]) + ');\n' +
         (/globals\(\)/.test(program) ? '' : "require('nbrjs').globals();\n") +
-        program + (/\bstart\(/.test(program) ? '' : '\n' + BLE_START) + '\n';
+        program + (/\bstart\(/.test(program) ? '' : '\n' + START[target]) + '\n';
     });
   };
 
@@ -126,7 +140,7 @@
     var status = q('.pg-status'), info = q('.pg-info'), roundEl = q('.pg-round');
     var range = q('[data-a=range]'), speed = q('[data-a=speed]'), play = q('[data-a=play]');
 
-    var cfg, pos, sensors, net, program, out = {}, rounds = 0, T = null;
+    var cfg, pos, sensors, net, program, out = {}, rounds = 0, T = null, remote = null;
     var playing = o.autoplay !== false, visible = true, hover = null, drag = null;
 
     var setStatus = function (msg, err) {
@@ -135,6 +149,7 @@
     };
     var restart = function () {
       net = S.network(pos, +range.value);
+      if (remote) net.devices[remote.id] = remote;
       out = {};
       rounds = 0;
       draw();
@@ -147,8 +162,24 @@
       for (var id in pos) sensors[id] = { source: false, obstacle: false };
       (cfg.sources || [0]).forEach(function (id) { if (sensors[id]) sensors[id].source = true; });
       (cfg.obstacles || []).forEach(function (id) { if (sensors[id]) sensors[id].obstacle = true; });
+      place();
       range.value = cfg.range || 1.5;
       speed.value = Math.round(1000 / (cfg.period || 200));
+      restart();
+    };
+    // A node played by something else, e.g. a real board (puck.html): dev = {id, label, round(program, inbox, sensors, nbrSensors)}.
+    // It joins between the central nodes; attach(null) removes it.
+    var place = function () {
+      if (!remote) return;
+      var ids = Object.keys(pos), x = 0, y = 0;
+      ids.forEach(function (id) { x += pos[id][0] / ids.length; y += pos[id][1] / ids.length; });
+      pos[remote.id] = pos[remote.id] || [x + 0.5, y + 0.5];
+      sensors[remote.id] = sensors[remote.id] || { source: false, obstacle: false };
+    };
+    var attach = function (dev) {
+      if (remote) { delete pos[remote.id]; delete sensors[remote.id]; delete out[remote.id]; }
+      remote = dev;
+      place();
       restart();
     };
     var loadProgram = function () {
@@ -240,6 +271,10 @@
         }
         g.fillStyle = fg;
         if (id in out) g.fillText(fmt(out[id]), p[0], p[1] + 23);
+        if (remote && id === remote.id) {
+          g.fillStyle = accent;
+          g.fillText(remote.label || id, p[0], p[1] - 16);
+        }
       });
       roundEl.textContent = 'round ' + rounds;
       showInfo();
@@ -346,8 +381,8 @@
     }
     window.addEventListener('resize', draw);
     loop();
-    return { reset: reset };
+    return { reset: reset, attach: attach, program: function () { return progEl.value; } };
   };
 
-  window.Playground = { mount: mount };
+  window.Playground = { mount: mount, exportFor: exportForEspruino };
 })();

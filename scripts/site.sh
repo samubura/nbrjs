@@ -7,5 +7,5 @@ rm -rf _site
 mkdir -p _site/modules/nbrjs
 cp -r web src _site/
 cp src/core.js _site/modules/nbrjs.js
-cp src/ble.js _site/modules/nbrjs/ble.js
+cp src/ble.js src/host.js _site/modules/nbrjs/
 printf '<!doctype html>\n<meta http-equiv="refresh" content="0; url=web/">\n<a href="web/">NbrJS</a>\n' > _site/index.html
