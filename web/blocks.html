@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NbrJS a blocchi</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<style>
+  .bk-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 14px 16px 4px; }
+  .bk-head h1 { font-size: 1.3rem; margin: 0; }
+  .bk-head select { font: inherit; font-size: 14px; color: var(--fg); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; }
+  .bk-head p { flex-basis: 100%; margin: 0; color: var(--dim); font-size: 15px; }
+  .bk { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; padding: 8px 16px 16px; align-items: start; }
+  #ws { height: 640px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .bk .pg { margin: 0; }
+  @media (max-width: 900px) { .bk { grid-template-columns: 1fr; } #ws { height: 460px; } }
+</style>
+<div class="bk-head">
+  <h1>Programmi a blocchi</h1>
+  <label>Esempio <select id="starter"></select></label>
+  <p>Componi il programma con i blocchi: il codice generato è in <b>program.js</b> e gira subito nella rete qui accanto. I parametri come <code>d</code> o <code>c</code> sono nella categoria <b>Parametri</b>.</p>
+</div>
+<div class="bk">
+  <div id="ws"></div>
+  <div id="pg"></div>
+</div>
+<script src="https://unpkg.com/blockly@13.3.0/blockly.min.js"></script>
+<script src="https://unpkg.com/blockly@13.3.0/msg/it.js"></script>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
+<script src="../src/align.js"></script>
+<script src="playground.js"></script>
+<script src="blocks.js"></script>
+<script src="site.js"></script>
