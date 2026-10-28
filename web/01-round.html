@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round e stato</title>
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>1 · Round e stato</h1>
+<p class="lead">Ogni dispositivo esegue lo stesso programma, a ripetizione. Ogni esecuzione è un <b>round</b>.</p>
+
+<h2>Il ciclo di un dispositivo</h2>
+<p>A ogni round un dispositivo fa sempre le stesse tre cose:</p>
+<ol>
+  <li>legge i suoi <b>sensori</b> e gli ultimi <b>messaggi</b> ricevuti dai vicini;</li>
+  <li>esegue il programma, che produce un <b>valore</b> (l'output del nodo) e un <b>messaggio</b>;</li>
+  <li>trasmette il messaggio a chiunque sia in ascolto.</li>
+</ol>
+<p>Nel simulatore i round sono sincroni per semplicità; sui dispositivi veri ognuno va col suo ritmo, e i programmi aggregati funzionano lo stesso.</p>
+
+<p>Un programma NbrJS è una funzione senza argomenti, <code>program</code>: è il passo 2. La più semplice mostra l'identificativo di ogni nodo con <code>mid()</code>.</p>
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="">
+<script type="text/plain">
+var program = () => mid();
+</script>
+</div>
+
+<h2>Ricordare: <code>rep</code></h2>
+<p>Il programma riparte da capo a ogni round: le variabili locali non sopravvivono. Per avere uno <b>stato</b> si usa <code>rep(iniziale, f)</code>: al primo round <code>f</code> riceve il valore iniziale, poi riceve sempre il risultato del round precedente.</p>
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="">
+<script type="text/plain">
+// Conta i round: 1, 2, 3, ...
+var program = () => rep(0, (c) => c + 1);
+</script>
+</div>
+<p>Premi <b>Reset</b>: la rete riparte, e con lei gli stati. Passa sopra un nodo: il messaggio è <code>{}</code>, perché <code>rep</code> è memoria locale e non manda nulla ai vicini.</p>
+
+<div class="note">Il codice è JavaScript vero, nel sottoinsieme che gira su Espruino: arrow function, ternari, <code>Math</code>, array e oggetti sì; destructuring, spread e parametri di default no.</div>
+
+<h2>Prova tu</h2>
+<p class="task">1. Un lampeggio: ogni nodo alterna <code>true</code> e <code>false</code> a ogni round.</p>
+<p class="task">2. Un conto alla rovescia da 10 che si ferma a 0.</p>
+<p class="task">3. Ogni nodo parte dal proprio id (numerico: <code>+mid()</code>) e conta da lì.</p>
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="">
+<script type="text/plain">
+// Scrivi qui la tua soluzione
+var program = () => rep(false, (b) => b);
+</script>
+</div>
+<details><summary>Soluzioni</summary>
+<pre><code>var program = () => rep(false, (b) => !b);
+
+var program = () => rep(10, (c) => Math.max(c - 1, 0));
+
+var program = () => rep(+mid(), (c) => c + 1);</code></pre>
+</details>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

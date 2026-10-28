@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comporre funzioni</title>
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>4 · Comporre funzioni</h1>
+<p class="lead">Una funzione aggregata è una normale funzione JavaScript: si passa, si compone, si riusa. È qui che il paradigma diventa potente.</p>
+
+<h2>Broadcast: diffondere un valore</h2>
+<p>Il gradiente dice <em>quanto</em> sei lontano dalla sorgente. Se insieme alla distanza condividiamo un valore, ogni nodo impara anche <em>cosa</em> dice la sorgente più vicina. Il valore condiviso è una coppia <code>[distanza, valore]</code>: un semplice array, perché su Espruino non c'è destructuring.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0,39">
+<script type="text/plain">
+var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
+  n.zip(nbrSense('range'), (p, r) => [p[0] + r, p[1]])
+   .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
+
+// Ogni nodo mostra l'id della sorgente più vicina: una partizione di Voronoi.
+var program = () => broadcast(sense('source'), mid())[1];
+</script>
+</div>
+<p>I colori sono uno per valore distinto: ogni regione è "di proprietà" di una sorgente. Aggiungi sorgenti e guarda le regioni riorganizzarsi.</p>
+
+<h2>Blocchi che usano blocchi</h2>
+<p>Dato <code>broadcast</code>, molte cose diventano una riga. Per esempio la distanza fra due nodi speciali, nota a tutta la rete: il nodo <code>B</code> calcola la sua distanza da <code>A</code> con un gradiente e poi la diffonde.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0">
+<script type="text/plain">
+var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
+var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
+  n.zip(nbrSense('range'), (p, r) => [p[0] + r, p[1]])
+   .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
+
+// A è la sorgente, B è il nodo 35
+var program = () => broadcast(mid() === '35', gradient(sense('source')))[1];
+</script>
+</div>
+<p>Trascina il nodo 35 o la sorgente: tutta la rete aggiorna il valore. Nota che ogni chiamata (<code>gradient</code>, <code>broadcast</code>) ha il suo spazio nei messaggi (<code>x0</code>, <code>x1</code>): due blocchi non si confondono mai.</p>
+
+<h2>Prova tu</h2>
+<p class="task">1. Diffondi dalla sorgente il suo contatore dei round (<code>rep</code>): i nodi lontani vedranno numeri più vecchi. Di quanto, rispetto alla distanza?</p>
+<p class="task">2. Scrivi <code>hopBroadcast(src, v)</code> che usa i salti invece di <code>range</code>.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0">
+<script type="text/plain">
+var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
+  n.zip(nbrSense('range'), (p, r) => [p[0] + r, p[1]])
+   .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
+
+var program = () => broadcast(sense('source'), mid())[1];
+</script>
+</div>
+<details><summary>Soluzioni</summary>
+<pre><code>var program = () => {
+  var clock = rep(0, (c) => c + 1);
+  return clock - broadcast(sense('source'), clock)[1];  // ritardo: circa i salti dalla sorgente
+};
+
+var hopBroadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
+  n.map((p) => [p[0] + 1, p[1]]).reduce((best, p) => p[0] &lt; best[0] ? p : best, [Infinity, null]));</code></pre>
+</details>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

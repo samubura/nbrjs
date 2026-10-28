@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Domini e branch</title>
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>5 · Domini e branch</h1>
+<p class="lead">Quando parti diverse della rete devono fare cose diverse, serve dividere il <b>dominio</b>: chi parla con chi.</p>
+
+<h2>L'allineamento</h2>
+<p>Ogni operatore aggregato ha un <b>nome</b> dato dalla sua posizione nel programma: il primo è <code>x0</code>, il secondo <code>x1</code>, e così via. Due nodi scambiano valori solo sullo stesso nome: si dice che sono <b>allineati</b>. È ciò che permette di comporre blocchi senza che si confondano.</p>
+
+<h2>Il problema dell'<code>if</code></h2>
+<p>In questa linea i nodi 3 e 4 sono ostacoli (in nero, shift+click per cambiarli). Vogliamo che gli ostacoli condividano 100 fra loro e gli altri 1 fra loro, e che ognuno mostri il massimo che vede. Con un <code>if</code> (qui un ternario):</p>
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-obstacles="3,4">
+<script type="text/plain">
+var program = () => sense('obstacle') ? nbr(100).max() : nbr(1).max();
+</script>
+</div>
+<p>I nodi 2 e 5 mostrano 100: <b>sbagliato</b>. Entrambi i <code>nbr</code> sono il primo operatore del programma, quindi si chiamano tutti e due <code>x0</code>: per i nodi sono la stessa cosa, e i valori si mescolano attraverso il confine.</p>
+
+<h2>La soluzione: <code>branch</code></h2>
+<p><code>branch(condizione, () =&gt; ..., () =&gt; ...)</code> esegue uno dei due rami e mette la condizione nel nome: gli operatori diventano <code>b0.1/x0</code> e <code>b0.0/x0</code>. Chi ha preso un ramo diverso non è più allineato, e la rete si divide in due <b>domini</b> separati.</p>
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-obstacles="3,4">
+<script type="text/plain">
+var program = () => branch(sense('obstacle'), () => nbr(100).max(), () => nbr(1).max());
+</script>
+</div>
+<p>Ora i nodi 2 e 5 mostrano 1. Passa sopra un nodo per vedere i nomi nel messaggio. È la stessa regola di ScaFi: <b>attorno a operatori aggregati si usa <code>branch</code></b>; un <code>if</code> o un ternario va bene solo per valori locali.</p>
+
+<h2>Un gradiente che aggira gli ostacoli</h2>
+<p>Con <code>branch</code> gli ostacoli escono dal calcolo: il gradiente li aggira.</p>
+<div class="pg-embed" data-nodes="49" data-sources="0" data-obstacles="3,10,17,24,31,38">
+<script type="text/plain">
+var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
+
+var program = () => branch(sense('obstacle'), () => null, () => gradient(sense('source')));
+</script>
+</div>
+
+<h2>Prova tu</h2>
+<p class="task">1. Togli il <code>branch</code> dall'ultimo esempio, usando un ternario: cosa succede vicino agli ostacoli, e perché?</p>
+<p class="task">2. Due mondi separati: i nodi con x &lt; 3 calcolano il gradiente, gli altri contano i propri vicini.</p>
+<div class="pg-embed" data-nodes="49" data-sources="0">
+<script type="text/plain">
+var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
+
+var program = () => gradient(sense('source'));
+</script>
+</div>
+<details><summary>Soluzioni</summary>
+<p>1. Con <code>sense('obstacle') ? null : gradient(...)</code> gli ostacoli non eseguono <code>share</code> e non mandano <code>x0</code>, quindi qui il risultato sembra corretto. Ma basta un'altra operazione aggregata nel ramo degli ostacoli per riprodurre il mescolamento visto sopra: <code>branch</code> rende la separazione una garanzia, non una coincidenza.</p>
+<pre><code>var program = () => branch(sense('x') &lt; 3,
+  () => gradient(sense('source')),
+  () => nbr(1).sum());</code></pre>
+</details>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xc, la primitiva</title>
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>6 · xc: un messaggio per vicino</h1>
+<p class="lead"><code>nbr</code> e <code>share</code> mandano lo stesso valore a tutti. L'eXchange Calculus ha un'unica primitiva, <code>xc</code>, che può mandare a ogni vicino un valore diverso.</p>
+
+<h2>Come funziona</h2>
+<p><code>xc(iniziale, (n) =&gt; ...)</code>:</p>
+<ul>
+  <li><code>n</code> è il campo di ciò che ogni vicino ha mandato <b>a me</b>; <code>n.self</code> è ciò che mi sono mandato al round prima (all'inizio, <code>iniziale</code>);</li>
+  <li>se la funzione restituisce un <b>campo</b>, ogni vicino riceve il suo valore; un vicino nuovo, che non è nel campo, riceve il valore di default;</li>
+  <li>se restituisce un valore normale, lo ricevono tutti;</li>
+  <li><code>retsend(risultato, daInviare)</code> separa il valore restituito da quello trasmesso.</li>
+</ul>
+<p>Gli operatori visti finora sono casi particolari: <code>share</code> è <code>xc</code> che restituisce un valore normale, e <code>nbr(v)</code> è <code>xc(v, (n) =&gt; retsend(n, v))</code>.</p>
+
+<h2>Età dei collegamenti</h2>
+<p>A ogni vicino rimando ciò che mi ha mandato, più uno. Ogni coppia di nodi tiene così un contatore privato che cresce finché il collegamento resiste. Ogni nodo mostra l'età del suo collegamento più recente: <b>trascina un nodo</b> in un altro punto e i suoi nuovi collegamenti ripartono da 1.</p>
+<div class="pg-embed" data-nodes="30" data-sources="">
+<script type="text/plain">
+var program = () => xc(0, (n) => n.map((x) => x + 1)).min();
+</script>
+</div>
+<p>Passa sopra un nodo: il messaggio ha la forma <code>[default, {id: valore}]</code>, un valore per ogni vicino.</p>
+
+<h2>Collect: risalire il gradiente</h2>
+<p>Il blocco "inverso" del broadcast: raccogliere un'informazione verso la sorgente. Ogni nodo sceglie come <b>parent</b> il vicino più vicino alla sorgente e manda <em>solo a lui</em> la sua somma parziale; agli altri manda 0. La sorgente ottiene il numero di nodi che la raggiungono.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0">
+<script type="text/plain">
+var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
+
+var collect = (dist, v) => {
+  var parent = nbr(dist).map((d, id) => [d, id])
+    .reduce((best, p) => p[0] < best[0] ? p : best, [dist, null])[1];
+  return xc(0, (n) => {
+    var total = n.sum(v);
+    return retsend(total, n.map((x, id) => id === parent ? total : 0));
+  });
+};
+
+var program = () => collect(gradient(sense('source')), 1);
+</script>
+</div>
+<p>Con <code>nbr</code> o <code>share</code> questo richiederebbe di mandare a tutti "il mio parent è X" e far filtrare ai vicini. Con <code>xc</code> il messaggio è già indirizzato: è il motivo per cui XC è la base dei framework moderni.</p>
+
+<h2>Prova tu</h2>
+<p class="task">1. Ogni nodo conta i propri figli: quanti vicini l'hanno scelto come parent.</p>
+<p class="task">2. Scrivi la tua <code>myShare(init, f)</code> usando solo <code>xc</code>, e usala nel gradiente.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0">
+<script type="text/plain">
+var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
+var program = () => {
+  var dist = gradient(sense('source'));
+  var parent = nbr(dist).map((d, id) => [d, id])
+    .reduce((best, p) => p[0] < best[0] ? p : best, [dist, null])[1];
+  return parent;
+};
+</script>
+</div>
+<details><summary>Soluzioni</summary>
+<pre><code>var program = () => {
+  var dist = gradient(sense('source'));
+  var parent = nbr(dist).map((d, id) => [d, id])
+    .reduce((best, p) => p[0] &lt; best[0] ? p : best, [dist, null])[1];
+  return xc(0, (n) => retsend(n.sum(), n.map((x, id) => id === parent ? 1 : 0)));
+};
+
+var myShare = (init, f) => xc(init, (n) => f(n));</code></pre>
+<p>La seconda è identica a <code>share</code>: quando la funzione restituisce un valore normale, <code>xc</code> lo usa sia come risultato sia come messaggio.</p>
+</details>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>
