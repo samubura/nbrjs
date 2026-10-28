@@ -4,6 +4,12 @@
   "description": "Minimal aggregate computing core (eXchange Calculus) for JavaScript and Espruino",
   "license": "Apache-2.0",
   "author": "Samuele Burattini",
+  "homepage": "https://samubura.github.io/nbrjs/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samubura/nbrjs.git"
+  },
+  "bugs": "https://github.com/samubura/nbrjs/issues",
   "exports": {
     ".": "./src/core.js",
     "./sim": "./src/sim.js",

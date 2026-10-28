@@ -2,6 +2,8 @@
 
 # NbrJS
 
+[![CI](https://github.com/samubura/nbrjs/actions/workflows/ci.yml/badge.svg)](https://github.com/samubura/nbrjs/actions/workflows/ci.yml)
+
 Minimal aggregate computing with **eXchange Calculus (XC)** semantics, in plain JavaScript.
 One small core (~5 KB, zero dependencies) that runs on [Espruino](https://www.espruino.com/) (Puck.js, ESP32),
 Node and the browser. The same program runs in simulation or on a real BLE network: only the config changes.
@@ -20,8 +22,8 @@ start(program, {
 });
 ```
 
-**Learn it:** step-by-step tutorials (Italian) with a live simulator, and a playground, in [`web/`](web/)
-(published on GitHub Pages). Locally: `python3 -m http.server` from the repo root, then open `/web/`.
+**Learn it:** [step-by-step tutorials](https://samubura.github.io/nbrjs/web/) (Italian) with a live simulator,
+and a [playground](https://samubura.github.io/nbrjs/web/playground.html). Locally: `python3 -m http.server` from the repo root, then open `/web/`.
 
 ## API
 
@@ -57,10 +59,10 @@ Config, common to all targets: `period` (ms), `sensors(id)` → values for `sens
 ## On a device
 
 - **Playground**: the *Espruino ↗* button gives a file ready for the [Web IDE](https://www.espruino.com/ide/).
-- **Web IDE modules**: add `<pages-url>/modules` to *Settings → Communications → Module URL*, then
+- **Web IDE modules**: add `https://samubura.github.io/nbrjs/modules` to *Settings → Communications → Module URL*, then
   `require('nbrjs')` and `require('nbrjs/ble')` work like official modules.
 - **CLI**: `npm run bundle -- examples/hops.js > dist/hops.js` inlines the modules (and the target's) for upload.
-- **One board only?** The Puck + PC demo (`web/puck.html`, Chrome/Edge) uploads the program over Web Bluetooth
+- **One board only?** The [Puck + PC demo](https://samubura.github.io/nbrjs/web/puck.html) (Chrome/Edge) uploads the program over Web Bluetooth
   and makes the board one node of a simulated network.
 
 ## Develop
