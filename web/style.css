@@ -40,12 +40,14 @@ h2 { margin-top: 2.2rem; }
 .site-header nav .ext { margin-left: auto; }
 .icon-btn { display: none; font: inherit; font-size: 15px; color: var(--fg); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
 
-/* Pages: a reading column; the playground gets the full width; the course adds its chapters. */
-main { padding: 36px 40px 64px; min-width: 0; }
-main.page { max-width: 860px; margin: 0 auto; }
-main.wide { max-width: 1400px; margin: 0 auto; }
-main > p, main > ul, main > ol, main > h1, main > h2, main > h3, main > details, main > .note { max-width: 72ch; }
-.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); max-width: 1220px; margin: 0 auto; }
+/* Pages: a reading column; playgrounds take the whole width, with the code beside the network;
+   the course adds its chapters. */
+main { padding: 36px 48px 64px; min-width: 0; }
+main.page { max-width: 1080px; margin: 0 auto; }
+main.wide { max-width: 1640px; margin: 0 auto; }
+main > p, main > ul, main > ol, main > h1, main > h2, main > h3, main > details, main > .note { max-width: 88ch; }
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); max-width: 1640px; margin: 0 auto; }
+@media (min-width: 1400px) { body { font-size: 17px; } }
 #toc { position: sticky; top: 58px; align-self: start; height: calc(100vh - 58px); overflow-y: auto; padding: 28px 16px; border-right: 1px solid var(--line); }
 #toc h2 { margin: 0 0 10px 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); }
 #toc ol { list-style: none; padding: 0; margin: 0; }
@@ -101,12 +103,17 @@ details summary { cursor: pointer; font-weight: 600; }
 .pg-bar input[type=range] { width: 80px; accent-color: var(--accent); }
 .pg-round { margin-left: auto; font-family: var(--mono); }
 .pg-main { display: grid; grid-template-columns: 1fr; }
-@container (min-width: 860px) { .pg-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); } .pg-editors { border-right: 1px solid var(--line); } .pg-code { flex: 1; } }
+@container (min-width: 860px) {
+  .pg-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+  .pg-editors { border-right: 1px solid var(--line); }
+  .pg-code { flex: 1; border-bottom: 0; }
+  .pg canvas { height: min(calc(var(--pg-h, 340px) * 1.3), 78vh); }
+}
 .pg-tabs { display: inline-flex; gap: 2px; }
 .pg-tabs button[aria-selected="true"] { background: var(--panel); border-color: var(--accent); color: var(--accent); }
 .pg-editors { min-width: 0; display: flex; flex-direction: column; }
 .pg-code { width: 100%; border: 0; border-bottom: 1px solid var(--line); resize: vertical; padding: 12px 14px; background: var(--code-bg); color: var(--fg); line-height: 1.5; outline: none; tab-size: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
-.pg canvas { display: block; width: 100%; touch-action: none; cursor: pointer; }
+.pg canvas { display: block; width: 100%; height: var(--pg-h, 340px); touch-action: none; cursor: pointer; }
 .pg-status { font-family: var(--mono); font-size: 13px; padding: 0 12px; color: var(--err); }
 .pg-status:empty { display: none; }
 .pg-info { font-family: var(--mono); font-size: 12px; color: var(--dim); padding: 6px 12px 8px; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
@@ -117,10 +124,19 @@ details summary { cursor: pointer; font-weight: 600; }
 .pg-dialog-bar { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
 .pg-dialog-bar button { font: inherit; font-size: 14px; color: var(--fg); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 14px; cursor: pointer; }
 
-/* puck.html */
-.demo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 18px 0 -6px; font-size: 14px; color: var(--dim); }
+/* puck.html: the steps side by side, then the controls and what to do with the current example. */
+.steps { list-style: none; counter-reset: step; padding: 0; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; max-width: none !important; }
+.steps li { counter-increment: step; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 15px; color: var(--dim); }
+.steps li b:first-child { display: block; color: var(--fg); margin-bottom: 4px; }
+.steps li b:first-child::before { content: counter(step) ". "; color: var(--accent); }
+.steps em { color: var(--fg); font-style: normal; font-weight: 600; }
+.demo-panel { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin: 18px 0 -6px; }
+.demo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 14px; color: var(--dim); }
 .demo-bar button { font: inherit; color: var(--fg); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+.demo-bar button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
 .demo-bar button:disabled { opacity: .5; cursor: default; }
+.stale { color: var(--accent); }
+.howto { margin: 8px 0 0; }
 #console { max-height: 14em; overflow: auto; font-size: 12px; }
 
 .pg-export h3 { margin: 0 0 6px; }
@@ -131,7 +147,7 @@ details summary { cursor: pointer; font-weight: 600; }
 .pg-dev-log { font-size: 12px; max-height: 10em; overflow: auto; }
 .pg-export details { margin-top: 14px; }
 .pg-dialog-bar button:disabled { opacity: .5; cursor: default; }
-.readings { font-family: var(--mono); font-size: 14px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; margin: 14px 0 0; }
+.readings { margin-left: auto; font-family: var(--mono); font-size: 13px; color: var(--fg); }
 
 /* Reference tables: wide ones scroll on their own on phones. */
 .table { overflow-x: auto; margin: 1rem 0; }

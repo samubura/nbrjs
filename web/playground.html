@@ -12,6 +12,7 @@
 <details><summary>Quick reference</summary>
 <p>Operators: <code>xc</code>, <code>retsend</code>, <code>nbr</code>, <code>rep</code>, <code>share</code>, <code>branch</code>, <code>align</code>, <code>aggregate</code>, <code>id()</code>,
 <code>sense(name)</code> (in the simulator <code>source</code>, <code>obstacle</code>, <code>x</code>, <code>y</code> and those from config.js), <code>nbrSense('range')</code>.</p>
+<p>Display: a node shows its value, coloured by it; return <code>{ label, value }</code> to show the label and colour by the value.</p>
 <p>Fields: <code>.self</code>, <code>.map((v, id) =&gt; ...)</code>, <code>.zip(other, (a, b) =&gt; ...)</code>, <code>.reduce(f, initial)</code>, <code>.min()</code>, <code>.max()</code>, <code>.sum()</code>, <code>.at(id)</code>. Reductions skip the device itself.</p>
 <p>Library: <code>hopsTo</code>, <code>distanceTo</code>, <code>broadcast</code>, <code>collect</code>, <code>collectSum</code>, <code>isLeader</code>, <code>networkMax</code>, <code>networkMin</code>, <code>neighbourCount</code>, <code>rounds</code>, <code>countdown</code>, <code>minId</code>.</p>
 <p>config.js: <code>nodes</code>, <code>layout</code>, <code>range</code>, <code>sources</code>, <code>obstacles</code>, <code>period</code>, <code>sensors</code>. As on a radio: <code>loss</code>, <code>skip</code>, <code>ttl</code>, and <code>target: 'ble'</code> for Bluetooth messages (hover a node to see them).</p>

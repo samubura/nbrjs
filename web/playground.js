@@ -49,12 +49,33 @@
     host: [
       'var source = false;',
       "setWatch(() => { source = !source; }, BTN1, { edge: 'rising', repeat: true, debounce: 50 });",
+      '// Puck.js v2: the accelerometer, and when the gyro last turned faster than 200 degrees/s',
+      'var acc = { x: 0, y: 0, z: 1 }, shaken = 0;',
+      'try {',
+      '  Puck.accelOn();',
+      "  Puck.on('accel', (a) => {",
+      '    var g = a.gyro;',
+      '    acc = a.acc;',
+      '    if (Math.sqrt(g.x * g.x + g.y * g.y + g.z * g.z) / 134 > 200) shaken = getTime();',
+      '  });',
+      '} catch (e) {} // Puck.js v1: no accelerometer',
+      "// The page lights the LEDs with the colour of the Puck's node: r, g, b from 0 to 1.",
+      '// GAIN evens out the LEDs (the green one is the brightest): tune it to your Puck.',
+      'var GAIN = [1, 0.6, 1], rgb = [0, 0, 0];',
+      'var nbrjsLed = (c) => { rgb = c; analogWrite(LED1, c[0] * GAIN[0]); analogWrite(LED2, c[1] * GAIN[1]); analogWrite(LED3, c[2] * GAIN[2]); };',
+      '// Puck.light() reads through the red LED and turns it off: once a second, then the LEDs again.',
+      'var light = 0;',
+      'setInterval(() => { light = Math.round(Puck.light() * 100) / 100; nbrjsLed(rgb); }, 1000);',
       'start(program, {',
       "  target: 'host',",
-      "  // the Puck's sensors, read in program.js with sense(name)",
-      '  sensors: () => ({ source: source, light: Math.round(Puck.light() * 100) / 100, temp: Math.round(E.getTemperature()) }),',
-      '  // LEDs: true green; small numbers 0 red, 1 green, 2 blue',
-      '  onResult: (v) => { LED1.write(v === 0); LED2.write(v === 1 || v === true); LED3.write(v === 2); }',
+      "  // the Puck's sensors, read in program.js with sense(name). tilt: 0 face up, 0.5 on its side, 1 upside down",
+      '  sensors: () => ({',
+      '    source: source,',
+      '    light: light,',
+      '    temp: Math.round(E.getTemperature()),',
+      '    tilt: Math.round(Math.acos(acc.z / Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z)) / Math.PI * 100) / 100,',
+      '    shake: getTime() - shaken < 1',
+      '  })',
       '});']
   };
 
@@ -107,6 +128,9 @@
     for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
     return Math.abs(h) % 360;
   };
+  // A value {label, value} shows its label and takes the colour of its value.
+  var label = function (v) { return v && typeof v === 'object' && 'label' in v ? v.label : v; };
+  var shade = function (v) { return v && typeof v === 'object' && 'label' in v ? v.value : v; };
   // Numbers: warm near 0, cold when far. Booleans: accent/muted. Anything else: a colour per distinct value.
   var colour = function (v, max, accent) {
     if (typeof v === 'number') return isFinite(v) ? 'hsl(' + (15 + 210 * Math.min(Math.abs(v) / max, 1)) + ',75%,55%)' : null;
@@ -120,7 +144,8 @@
   // Bluetooth options (hashSeed, hashBytes, chunks) every board must share.
   var BLE_OPTS = ['hashSeed', 'hashBytes', 'chunks'];
   var deviceFile = function (program, target, wifi, cfg) {
-    var st = START[target || 'ble'].join('\n');
+    // Puck.light() blinks the red LED (it is the sensor): only for programs that read the light.
+    var st = START[target || 'ble'].filter(function (l) { return /light/.test(program) || !/Puck\.light/.test(l); }).join('\n');
     if (wifi) st = st.replace("'SSID'", JSON.stringify(wifi.ssid)).replace("'PASSWORD'", JSON.stringify(wifi.password));
     var extra = (target || 'ble') !== 'ble' || !cfg ? [] : BLE_OPTS.filter(function (k) { return cfg[k] !== undefined; })
       .map(function (k) { return k + ': ' + JSON.stringify(cfg[k]); });
@@ -201,7 +226,7 @@
     // New network from the config: positions, initial sources/obstacles, range and speed.
     var reset = function () {
       pos = S.layout(cfg.layout || 'random', cfg.nodes || 30, cfg.seed);
-      canvas.style.height = (o.height || (cfg.layout === 'line' ? 120 : 340)) + 'px';
+      canvas.style.setProperty('--pg-h', (o.height || (cfg.layout === 'line' ? 120 : 340)) + 'px');
       sensors = {};
       for (var id in pos) sensors[id] = { source: false, obstacle: false };
       (cfg.sources || [0]).forEach(function (id) { if (sensors[id]) sensors[id].source = true; });
@@ -211,7 +236,8 @@
       speed.value = Math.round(1000 / (cfg.period || 200));
       restart();
     };
-    // A node played by something else, e.g. a real board (puck.html): dev = {id, label, round(program, inbox, sensors, nbrSensors)}.
+    // A node played by something else, e.g. a real board (puck.html): dev = {id, label, round(program, inbox, sensors, nbrSensors)},
+    // and optionally show(colour), called with its node's colour ('#rrggbb', null when off).
     // It joins between the central nodes; attach(null) removes it.
     var place = function () {
       if (!remote) return;
@@ -296,7 +322,7 @@
       var css = getComputedStyle(el), v = function (n) { return css.getPropertyValue(n).trim(); };
       var fg = v('--fg'), muted = v('--node-off'), edge = v('--edge'), accent = v('--accent');
       var ids = Object.keys(pos), max = 1, i, j;
-      for (i in out) if (typeof out[i] === 'number' && isFinite(out[i])) max = Math.max(max, Math.abs(out[i]));
+      for (i in out) if (typeof shade(out[i]) === 'number' && isFinite(shade(out[i]))) max = Math.max(max, Math.abs(shade(out[i])));
 
       g.strokeStyle = edge;
       g.lineWidth = 1;
@@ -309,10 +335,11 @@
       g.font = '11px ui-monospace, monospace';
       g.textAlign = 'center';
       ids.forEach(function (id) {
-        var p = screen(id), s = sensors[id];
+        var p = screen(id), s = sensors[id], c = s.obstacle ? fg : colour(shade(out[id]), max, accent);
         g.beginPath();
         g.arc(p[0], p[1], 8, 0, 2 * Math.PI);
-        g.fillStyle = s.obstacle ? fg : colour(out[id], max, accent) || muted;
+        g.fillStyle = c || muted;
+        if (remote && remote.show && id === remote.id) remote.show(c && g.fillStyle); // the canvas gives it as #rrggbb
         g.fill();
         if (s.source || id === hover) {
           g.lineWidth = s.source ? 3 : 1.5;
@@ -320,7 +347,7 @@
           g.beginPath(); g.arc(p[0], p[1], 12, 0, 2 * Math.PI); g.stroke();
         }
         g.fillStyle = fg;
-        if (id in out && out[id] !== false) g.fillText(fmt(out[id]), p[0], p[1] + 23); // false: the muted colour says it
+        if (id in out && label(out[id]) !== false) g.fillText(fmt(label(out[id])), p[0], p[1] + 23); // false: the muted colour says it
         if (remote && id === remote.id) {
           g.fillStyle = accent;
           g.fillText(remote.label || id, p[0], p[1] - 16);

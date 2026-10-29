@@ -32,6 +32,21 @@
   var ascii = function (s) {
     return s.replace(/[^\x00-\x7f]/g, function (c) { return '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4); });
   };
+  // The standard CRC32 that the board's E.CRC32 computes: a module already in Storage is not sent again.
+  var crc32 = function (s) {
+    for (var c = -1, i = 0; i < s.length; i++) {
+      c ^= s.charCodeAt(i);
+      for (var k = 0; k < 8; k++) c = c >>> 1 ^ 0xEDB88320 & -(c & 1);
+    }
+    return (c ^ -1) >>> 0;
+  };
+  // A CSS colour '#rrggbb' (null: off) as LED levels from 0 to 1: the brightest channel full,
+  // the others with a gamma, or the LEDs wash every colour out to white.
+  var levels = function (hex) {
+    var c = hex ? [1, 3, 5].map(function (i) { return parseInt(hex.substr(i, 2), 16); }) : [0, 0, 0];
+    var top = Math.max.apply(null, c) || 1;
+    return c.map(function (x) { return Math.round(Math.pow(x / top, 2.2) * 100) / 100; });
+  };
 
   var ble = async function () {
     var dev = await navigator.bluetooth.requestDevice({
@@ -71,6 +86,8 @@
   var connect = async function (kind, onLine, onClose) {
     var t = typeof kind === 'object' ? kind : await (kind === 'usb' ? usb : ble)();
     var dec = new TextDecoder(), enc = new TextEncoder(), buf = '', waiting = [], queue = Promise.resolve();
+    var lit; // the colour on the board's LEDs: reset() turns them off
+    var errors = null; // the board's errors while a program starts
     t.data = function (bytes) {
       buf += dec.decode(bytes, { stream: true });
       var lines = buf.split('\n');
@@ -79,7 +96,10 @@
         l = l.replace(/\r|\x1b\[J|^>+/g, '');
         var w = waiting.find(function (x) { return l.slice(0, x.prefix.length) === x.prefix; });
         if (w) { waiting.splice(waiting.indexOf(w), 1); w.resolve(l.slice(w.prefix.length)); }
-        else if (l.trim()) onLine(l);
+        else if (l.trim()) {
+          if (errors && /Uncaught|Out of Memory|ERROR/.test(l)) errors.push(l);
+          onLine(l);
+        }
       });
     };
     t.closed = onClose;
@@ -113,6 +133,13 @@
       }
     };
 
+    // CRC32 of a file in the board's Storage (0 if missing, -1 if the board cannot tell).
+    var installed = function (name) {
+      var got = expect('NBRcrc', 3000);
+      write('\x10print("NBRcrc"+(E.CRC32?E.CRC32(require("Storage").read(' + JSON.stringify(name) + ')||""):-1))\n');
+      return got.then(Number, function () { return -1; });
+    };
+
     var link = {
       name: t.name,
       close: t.close,
@@ -121,39 +148,55 @@
       upload: async function (code, save, progress) {
         progress = progress || function () {};
         link.uploading = true;
+        link.running = false;
         try {
           await write('\x03');
           await run('reset()', 8000);
+          lit = undefined;
           await wait(300);
           var ids = needs(code);
           for (var i = 0; i < ids.length; i++) {
+            var text = ascii(await module(ids[i]));
+            if (await installed(ids[i]) === crc32(text)) continue;
             progress('installing ' + ids[i]);
-            await store(ids[i], ascii(await module(ids[i])));
+            await store(ids[i], text);
           }
           progress(save ? 'saving the program' : 'starting the program');
           if (save) {
             await store('.bootcde', ascii(code));
             await write('\x10load()\n');
           } else {
-            await write('\x10' + code.replace(/\n/g, '\n\x10') + '\n');
+            // Wait until the board has run all of it, and fail with the first error it printed.
+            errors = [];
+            await write('\x10' + ascii(code).replace(/\n/g, '\n\x10') + '\n');
+            await run('', 8000);
+            if (errors.length) throw new Error('the program did not start: ' + errors[0]);
+            link.running = true;
           }
-        } finally { link.uploading = false; }
+        } finally { link.uploading = false; errors = null; }
       },
-      // One round on a board running target 'host': resolves to {id, v, m}.
-      round: function (inbox, nbrSensors) {
+      // One round on a board running target 'host': resolves to {id, v, m}. led: [r, g, b] for
+      // the board's nbrjsLed (see START.host in playground.js), if it has one.
+      round: function (inbox, nbrSensors, led) {
         var arg = JSON.stringify(nbrjs.encode({ inbox: inbox, nbr: nbrSensors }));
         var answer = expect('NBR{', 3000);
-        write('\x10print(nbrjsRound(' + arg + '))\n');
+        write('\x10' + (led ? 'if(global.nbrjsLed)nbrjsLed(' + JSON.stringify(led) + ');' : '') + 'print(nbrjsRound(' + arg + '))\n');
         return answer.then(function (json) { return nbrjs.decode('{' + json); });
       },
       // A node for Playground.attach. Rounds over the link are slower than the simulation:
       // the board answers when it can, and its neighbours hear its last message meanwhile.
+      // The playground calls show(colour) with its node's colour: the next round lights the LEDs with it.
+      // Rounds start once an upload has started the program.
       device: function (label) {
         var last = { value: undefined, message: {} }, busy = false, d = { id: 'puck', label: label }; // host's default id
+        var colour = null;
+        d.show = function (hex) { colour = hex; };
         d.round = function (program, inbox, sensors, nbrSensors) {
-          if (!busy && !link.uploading) {
+          if (!busy && link.running && !link.uploading) {
             busy = true;
-            link.round(inbox, nbrSensors).then(function (r) { last = { value: r.v, message: r.m }; d.sensors = r.s; }, function () {})
+            var led = colour !== lit ? levels(colour) : null;
+            lit = colour;
+            link.round(inbox, nbrSensors, led).then(function (r) { last = { value: r.v, message: r.m }; d.sensors = r.s; }, function () {})
               .then(function () { busy = false; });
           }
           return last;

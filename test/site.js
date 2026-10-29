@@ -65,10 +65,10 @@ fs.readdirSync(web).filter(function (f) { return /\.html$/.test(f); }).sort().fo
 });
 var g = {};
 vm.runInNewContext(fs.readFileSync(path.join(web, 'presets.js'), 'utf8') + ';this.P = PRESETS', g);
-// The Puck demos: ['name', "program"] pairs in puck.html's script, with its simulated neighbours.
+// The Puck demos: ['name', 'how', "program"] in puck.html's script, with its simulated neighbours.
 var puck = fs.readFileSync(path.join(web, 'puck.html'), 'utf8').match(/var demos = (\[[\s\S]*?\n  \])/)[1];
 vm.runInNewContext('this.D = ' + puck, g);
-g.D.forEach(function (d) { g.P.push({ name: 'puck: ' + d[0], program: d[1], config: "return { nodes: 24, layout: 'random', sources: [] };" }); });
+g.D.forEach(function (d) { g.P.push({ name: 'puck: ' + d[0], program: d[2], config: "return { nodes: 24, layout: 'random', sources: [] };" }); });
 g.P.forEach(function (p) {
   var attrs = { test: p.test };
   if (p.config) {
