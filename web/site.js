@@ -11,7 +11,7 @@
     ['07-sensing.html', '7 · Sensing and acting'],
     ['08-devices.html', '8 · On devices']
   ];
-  var SECTIONS = [['course.html', 'Course'], ['playground.html', 'Playground'], ['esp32.html', 'ESP32'], ['puck.html', 'Puck.js demo']];
+  var SECTIONS = [['course.html', 'Course'], ['playground.html', 'Playground'], ['blocks.html', 'Blocks'], ['esp32.html', 'ESP32'], ['puck.html', 'Puck.js demo']];
   var here = location.pathname.split('/').pop() || 'index.html';
   var cur = COURSE.findIndex(function (s) { return s[0] === here; });
   var section = cur >= 0 ? 'course.html' : here;

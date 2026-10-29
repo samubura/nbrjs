@@ -449,7 +449,7 @@
     }
     window.addEventListener('resize', draw);
     loop();
-    return { reset: reset, attach: attach, program: function () { return progEl.value; } };
+    return { reset: reset, attach: attach, show: show, program: function () { return progEl.value; } };
   };
 
   window.Playground = { mount: mount, deviceFile: deviceFile, check: check };

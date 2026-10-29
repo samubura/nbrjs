@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blocks · NbrJS</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<style>
+  .bk-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 14px 16px 4px; }
+  .bk-head h1 { font-size: 1.3rem; margin: 0; }
+  .bk-head select { font: inherit; font-size: 14px; color: var(--fg); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; }
+  .bk-head p { flex-basis: 100%; margin: 0; color: var(--dim); font-size: 15px; }
+  .bk { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; padding: 8px 16px 16px; align-items: start; }
+  #ws { height: 640px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .bk .pg { margin: 0; }
+  @media (max-width: 900px) { .bk { grid-template-columns: 1fr; } #ws { height: 460px; } }
+</style>
+<div class="bk-head">
+  <h1>Programs from blocks</h1>
+  <label>Example <select id="starter"></select></label>
+  <p>Build the program from blocks: the generated code is in <b>program.js</b> and runs right away in the network next to it. Parameters and local variables such as <code>d</code> or <code>c</code> are in <b>Variables</b>; make your own functions in <b>Functions</b> (the gear adds parameters) and put several steps in a <b>do … return</b> block.</p>
+</div>
+<div class="bk">
+  <div id="ws"></div>
+  <div id="pg"></div>
+</div>
+<script src="https://unpkg.com/blockly@13.3.0/blockly.min.js"></script>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
+<script src="../src/lib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
+<script src="../src/check.js"></script>
+<script src="playground.js"></script>
+<script src="blocks.js"></script>
+<script src="site.js"></script>
