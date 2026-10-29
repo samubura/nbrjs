@@ -74,7 +74,7 @@
     };
     // With hashed keys, net.collisions lists the paths that share one: their operators would mix.
     var paths = {}, seen = {}, key = function (p) {
-      var h = A.hash(p, wire.seed);
+      var h = A.hash(p, wire.seed, wire.bytes);
       seen[p] = 1;
       if (h in paths && paths[h] !== p && paths[h] !== null) { net.collisions.push([paths[h], p]); paths[h] = null; }
       else if (!(h in paths)) paths[h] = p;
@@ -86,7 +86,7 @@
       for (var s = 1; s < 1000; s++) {
         var hs = {}, ok = true;
         for (var p in seen) {
-          var h = A.hash(p, s);
+          var h = A.hash(p, s, wire.bytes);
           if (hs[h]) { ok = false; break; }
           hs[h] = 1;
         }
@@ -100,7 +100,7 @@
   // The BLE wire format, for network(pos, range, {codec: bleCodec()}): hashed paths, float32 numbers,
   // ids as wide as real ones (node 3 is 40963), and messages over 23 bytes in up to `chunks` adverts
   // (4, as many as a 400 ms listening window hears) that the simulator hears or loses one by one.
-  // opts: {chunks, hashSeed}, as in start(..., {target: 'ble'}).
+  // opts: {chunks, hashSeed, hashBytes}, as in start(..., {target: 'ble'}).
   // Here rather than in nbrjs/ble, which goes on the boards.
   exports.bleCodec = function (opts) {
     opts = opts || {};
@@ -108,12 +108,13 @@
     return {
       hashed: true,
       seed: opts.hashSeed,
+      bytes: opts.hashBytes,
       id: function (key) { return 40960 + +key; },
       encode: function (msg) {
-        var data = B.pack(msg);
-        return data.length > 23 ? B.split(msg, opts.chunks || 4) : data;
+        var data = B.pack(msg, opts.hashBytes);
+        return data.length > 23 ? B.split(msg, opts.chunks || 4, opts.hashBytes) : data;
       },
-      decode: B.unpack
+      decode: function (s) { return B.unpack(s, opts.hashBytes); }
     };
   };
 

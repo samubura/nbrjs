@@ -116,10 +116,15 @@
   };
 
   // program.js as a device file: the library comes from the board's Storage (or the IDE's
-  // module URL), so the file is just the program plus start().
-  var deviceFile = function (program, target, wifi) {
+  // module URL), so the file is just the program plus start(). cfg: the playground's config, whose
+  // Bluetooth options (hashSeed, hashBytes, chunks) every board must share.
+  var BLE_OPTS = ['hashSeed', 'hashBytes', 'chunks'];
+  var deviceFile = function (program, target, wifi, cfg) {
     var st = START[target || 'ble'].join('\n');
     if (wifi) st = st.replace("'SSID'", JSON.stringify(wifi.ssid)).replace("'PASSWORD'", JSON.stringify(wifi.password));
+    var extra = (target || 'ble') !== 'ble' || !cfg ? [] : BLE_OPTS.filter(function (k) { return cfg[k] !== undefined; })
+      .map(function (k) { return k + ': ' + JSON.stringify(cfg[k]); });
+    if (extra.length) st = st.replace("  target: 'ble',", "  target: 'ble', " + extra.join(', ') + ',');
     var head = /globals\(\)/.test(program) ? '' : "require('nbrjs').globals();\n" +
       (usesLib(program) ? "require('nbrjs/lib').globals();\n" : '');
     return head + program.trim() +
@@ -187,7 +192,7 @@
     };
     var restart = function () {
       // target 'ble': messages in the BLE format, so float32, hashed paths and the advert limits show here.
-      net = S.network(pos, +range.value, { codec: overBle() ? S.bleCodec({ chunks: cfg.chunks, hashSeed: cfg.hashSeed }) : null, loss: cfg.loss, skip: cfg.skip, ttl: cfg.ttl });
+      net = S.network(pos, +range.value, { codec: overBle() ? S.bleCodec({ chunks: cfg.chunks, hashSeed: cfg.hashSeed, hashBytes: cfg.hashBytes }) : null, loss: cfg.loss, skip: cfg.skip, ttl: cfg.ttl });
       if (remote) net.devices[remote.id] = remote;
       out = {};
       rounds = 0;
@@ -251,8 +256,9 @@
         out = net.step(program, sensors);
         rounds++;
         var c = net.collisions[0];
-        if (c) setStatus('BLE: ' + c[0] + ' and ' + c[1] + ' share a 2-byte name and would mix: add hashSeed: ' + net.freeSeed() +
-          ' to config.js and to start() on the boards', true);
+        var seed = c && net.freeSeed();
+        if (c) setStatus('BLE: ' + c[0] + ' and ' + c[1] + ' share a name and would mix: add ' + (seed ? 'hashSeed: ' + seed + ', or ' : '') +
+          'hashBytes: ' + Math.min((cfg.hashBytes || 2) + 1, 3) + ' (a byte more per operator) to config.js; To device copies them', true);
       } catch (e) {
         setStatus('round ' + (rounds + 1) + ': ' + e.message, true);
         setPlaying(false);
@@ -325,10 +331,11 @@
     };
     // What a node sends over BLE: one advert, or chunks that it advertises in turn.
     var bleSends = function (m) {
-      if (typeof m === 'string') return A.encode(nbrjsBle.unpack(m)) + ' · ' + (m.length + 1) + ' B';
+      var kb = cfg.hashBytes;
+      if (typeof m === 'string') return A.encode(nbrjsBle.unpack(m, kb)) + ' · ' + (m.length + 1) + ' B';
       if (!m.length) return 'nothing: no part fits an advert';
       var all = {};
-      m.forEach(function (c) { var e = nbrjsBle.unpack(c); for (var k in e) all[k] = e[k]; });
+      m.forEach(function (c) { var e = nbrjsBle.unpack(c, kb); for (var k in e) all[k] = e[k]; });
       return A.encode(all) + ' · ' + m.length + ' adverts, ' + m.map(function (c) { return c.length + 2; }).join(' + ') + ' B';
     };
     var showInfo = function () {
@@ -382,7 +389,7 @@
     var devStatus = q('.pg-dev-status'), devLog = q('.pg-dev-log');
     var file = function () {
       var t = d('target').value;
-      return deviceFile(progEl.value, t, t === 'udp' && d('ssid').value ? { ssid: d('ssid').value, password: d('pass').value } : null);
+      return deviceFile(progEl.value, t, t === 'udp' && d('ssid').value ? { ssid: d('ssid').value, password: d('pass').value } : null, cfg);
     };
     var refresh = function () { d('wifi').hidden = d('target').value !== 'udp'; exported.value = file(); };
     d('target').onchange = refresh;

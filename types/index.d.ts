@@ -41,6 +41,8 @@ export interface StartConfig {
   group?: string;
   /** Another hash for operator names on BLE, when two collide: the same on every device. */
   hashSeed?: number;
+  /** Bytes per operator name on BLE (2): 3 makes collisions much rarer, 1 saves a byte. The same on every device. */
+  hashBytes?: 1 | 2 | 3;
   [option: string]: any;
 }
 export interface Running { id?: string | number; round(): any; stop(): void; }
@@ -55,6 +57,6 @@ export interface Device {
 export function device(id: string | number, hashed?: boolean): Device;
 export function encode(msg: any): string;
 export function decode(str: string): any;
-export function hash(path: string, seed?: number): string;
+export function hash(path: string, seed?: number, bytes?: 1 | 2 | 3): string;
 export function magic(group?: string): string;
 export const targets: Record<string, { start(program: () => any, cfg: StartConfig): Running }>;

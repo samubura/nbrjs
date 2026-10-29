@@ -180,13 +180,14 @@
     return exports;
   };
 
-  // 16-bit hash of a path: compact message keys for tight radios (device(id, true), nbrjs/ble).
-  // Two paths may share one (the BLE simulation reports it): another seed, the same on every device,
-  // gives another hash. The seed changes the multiplier: with a different start value alone, paths
-  // of the same length would keep colliding.
-  exports.hash = function (p, seed) {
-    var h = 7, m = 31 + (seed || 0);
-    for (var i = 0; i < p.length; i++) h = (h * m + p.charCodeAt(i)) % 65521;
+  // Hash of a path in `bytes` bytes (2 by default): compact message keys for tight radios
+  // (device(id, true), nbrjs/ble). Two paths may share one (the BLE simulation reports it): another
+  // seed, the same on every device, gives another hash; more bytes make it much rarer. The seed
+  // changes the multiplier: with a different start value alone, paths of the same length would keep
+  // colliding. Moduli: the largest primes below 2^8, 2^16, 2^24.
+  exports.hash = function (p, seed, bytes) {
+    var h = 7, m = 31 + (seed || 0), mod = bytes === 1 ? 251 : bytes === 3 ? 16777213 : 65521;
+    for (var i = 0; i < p.length; i++) h = (h * m + p.charCodeAt(i)) % mod;
     return String(h);
   };
   // First byte of BLE adverts and UDP datagrams: 'N', or one derived from start(..., {group}), so

@@ -42,11 +42,13 @@
     var j = A.encode(v);
     return chr(73 | flag, j.length) + j;
   };
-  exports.pack = function (msg) {
+  // kb: bytes of each key (the path hash), 2 by default; the same on every device.
+  var key = function (k, kb) { return kb === 1 ? chr(k) : kb === 3 ? chr(k >> 16 & 255) + two(k & 65535) : two(k); };
+  exports.pack = function (msg, kb) {
     var out = '';
     for (var k in msg) {
       var m = msg[k];
-      out += two(+k);
+      out += key(+k, kb);
       if (m === 1) { out += chr(70); continue; } // scope marker
       var ov = m[1], ids = ov ? Object.keys(ov) : [];
       out += val(m[0], ids.length ? 128 : 0);
@@ -55,7 +57,7 @@
     }
     return out;
   };
-  exports.unpack = function (s) {
+  exports.unpack = function (s, kb) {
     var i = 0, msg = {};
     var byte = function () { return s.charCodeAt(i++); };
     var get = function (t) {
@@ -73,7 +75,11 @@
       return SPECIAL[t - 64];
     };
     while (i < s.length) {
-      var k = String(byte() << 8 | byte()), t = byte();
+      var k = byte();
+      if (kb !== 1) k = k << 8 | byte();
+      if (kb === 3) k = k << 8 | byte();
+      k = String(k);
+      var t = byte();
       if (t === 70) { msg[k] = 1; continue; }
       var e = [get(t)];
       if (t & 128) {
@@ -92,12 +98,12 @@
   // A message over MAX bytes is split into chunks of whole entries, at most `max` of them, that the
   // board advertises in turn. A lost chunk only loses its operators: neighbours are then not aligned
   // with them, as with a lost message. Entries that do not fit are left out.
-  exports.split = function (msg, max) {
+  exports.split = function (msg, max, kb) {
     var out = [], cur = '';
     for (var k in msg) {
       var one = {};
       one[k] = msg[k];
-      var e = exports.pack(one);
+      var e = exports.pack(one, kb);
       if (e.length > MAX - 1) continue; // never fits, even alone (a chunk also carries the round)
       if (cur.length + e.length > MAX - 1) { out.push(cur); cur = ''; }
       cur += e;
@@ -111,6 +117,7 @@
   //        listens all the time), minRssi: ignore weaker neighbours (dBm), txPower: RSSI at 1 m (-60),
   //        group: only hear devices with the same group (e.g. the program's name),
   //        hashSeed: another hash for operator names, when two collide (the playground suggests one),
+  //        hashBytes: bytes per operator name, 1-3 (2): more make collisions much rarer,
   //        chunks: adverts a message over 23 bytes may take (as many as a listening window hears,
   //        one advert every 100 ms: 4 by default),
   //        sensors: (id) => ({...}), onResult: (value, id) => ...}
@@ -120,7 +127,8 @@
     var period = opts.period || 1000, ttl = opts.ttl || 3 * period / 1000, scan = opts.scan || 400;
     var tx = opts.txPower || -60, minRssi = opts.minRssi || -200;
     var chunks = opts.chunks || Math.max(1, Math.floor(Math.min(scan, period) / 100));
-    var seed = opts.hashSeed, hashed = seed ? function (p) { return A.hash(p, seed); } : true;
+    var seed = opts.hashSeed, kb = opts.hashBytes;
+    var hashed = seed || kb ? function (p) { return A.hash(p, seed, kb); } : true;
     var id = shortId(NRF.getAddress()), dev = A.device(id, hashed), magic = A.magic(opts.group);
     // Chunked adverts start with the magic byte + 128, then the sender's round number.
     var chunked = String.fromCharCode(magic.charCodeAt(0) | 128), count = 0;
@@ -133,10 +141,10 @@
       var s = String.fromCharCode.apply(null, new Uint8Array(d.manufacturerData));
       var j = shortId(d.id), msg, k;
       if (s[0] === magic) {
-        try { msg = exports.unpack(s.slice(1)); } catch (e) { return; }
+        try { msg = exports.unpack(s.slice(1), kb); } catch (e) { return; }
       } else if (s[0] === chunked) {
         var r = s.charCodeAt(1), p = parts[j], e;
-        try { e = exports.unpack(s.slice(2)); } catch (x) { return; }
+        try { e = exports.unpack(s.slice(2), kb); } catch (x) { return; }
         if (!p || p[0] !== r) p = parts[j] = [r, {}, p && (p[0] + 1 & 255) === r ? p[1] : {}];
         for (k in e) p[1][k] = e[k];
         msg = {};
@@ -160,11 +168,11 @@
       var now = getTime();
       for (var j in seen) if (now - seen[j] > ttl) { delete inbox[j]; delete rssi[j]; delete range[j]; delete seen[j]; delete parts[j]; }
       var r = dev.round(program, inbox, opts.sensors ? opts.sensors(id) : {}, { rssi: rssi, range: range });
-      var data = exports.pack(r.message), adv = function (m) { return { showName: false, manufacturer: COMPANY, manufacturerData: m, interval: 100 }; };
+      var data = exports.pack(r.message, kb), adv = function (m) { return { showName: false, manufacturer: COMPANY, manufacturerData: m, interval: 100 }; };
       if (data.length <= MAX) NRF.setAdvertising({}, adv(magic + data));
       else {
         // Too big for one advert: the board cycles through the chunks (an array of raw adverts).
-        var cs = exports.split(r.message, chunks), rn = String.fromCharCode(count++ & 255);
+        var cs = exports.split(r.message, chunks, kb), rn = String.fromCharCode(count++ & 255);
         if (cs.join('').length < data.length) console.log('nbrjs: message is ' + data.length + ' bytes, ' + chunks + ' adverts carry part of it');
         // ponytail: raw adverts in an array, as Espruino's docs describe; check on each board (ESP32 especially).
         if (!cs.length) NRF.setAdvertising({}, adv(magic));

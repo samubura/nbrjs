@@ -231,6 +231,24 @@ var seeded = A.start(function () { return nbr(1).sum(); }, { target: 'ble', peri
 seeded.round();
 seeded.stop();
 check('ble with hashSeed: names hashed with the seed', Object.keys(ble.unpack(adv.manufacturerData.slice(1))), [A.hash('x0', 5)]);
+var wide = A.start(function () { return nbr(1).sum(); }, { target: 'ble', period: 1e6, scan: 1e6, hashBytes: 3 });
+wide.round();
+wide.stop();
+check('ble with hashBytes: 3-byte names', [Object.keys(ble.unpack(adv.manufacturerData.slice(1), 3)), adv.manufacturerData.length], [[A.hash('x0', 0, 3)], 1 + 3 + 1]);
+
+// Operator names in 1 or 3 bytes instead of 2: the same results, a byte less or more per operator.
+var widths = [1, 2, 3].map(function (kb) {
+  var m = {};
+  m[A.hash('x0', 0, kb)] = [5];
+  m[A.hash('b0.1', 0, kb)] = 1;
+  var p = ble.pack(m, kb);
+  return [p.length, A.encode(ble.unpack(p, kb)) === A.encode(m)];
+});
+check('ble keys of 1, 2 or 3 bytes round-trip', widths, [[4, true], [6, true], [8, true]]);
+var hops3 = function (kb) {
+  return run(sim.network(line(5).pos, 1.5, { codec: sim.bleCodec({ hashBytes: kb }) }), function () { return L.hopsTo(sense('source')); }, 8, src0);
+};
+check('sim over BLE with 1- and 3-byte names', [hops3(1), hops3(3)], [run(line(5), function () { return L.hopsTo(sense('source')); }, 8, src0), run(line(5), function () { return L.hopsTo(sense('source')); }, 8, src0)]);
 
 // Messages over 23 bytes: chunks of whole entries, advertised in turn, merged by the receiver.
 var four = function () { return [nbr(1.5).sum(), nbr(2.5).sum(), nbr(3.5).sum(), nbr(4.5).sum()]; };
