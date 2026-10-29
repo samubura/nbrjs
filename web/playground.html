@@ -10,11 +10,13 @@
 <p><b>program.js</b> is the aggregate program, the same code that goes on a device. <b>config.js</b> describes the simulated network: nodes, layout, sensors. Every change restarts the network. <b>To device ↗</b> uploads the program to a Puck.js or an ESP32.</p>
 <div id="pg"></div>
 <details><summary>Quick reference</summary>
-<p>Operators: <code>xc</code>, <code>retsend</code>, <code>nbr</code>, <code>rep</code>, <code>share</code>, <code>branch</code>, <code>align</code>, <code>id()</code>,
+<p>Operators: <code>xc</code>, <code>retsend</code>, <code>nbr</code>, <code>rep</code>, <code>share</code>, <code>branch</code>, <code>align</code>, <code>aggregate</code>, <code>id()</code>,
 <code>sense(name)</code> (in the simulator <code>source</code>, <code>obstacle</code>, <code>x</code>, <code>y</code> and those from config.js), <code>nbrSense('range')</code>.</p>
 <p>Fields: <code>.self</code>, <code>.map((v, id) =&gt; ...)</code>, <code>.zip(other, (a, b) =&gt; ...)</code>, <code>.reduce(f, initial)</code>, <code>.min()</code>, <code>.max()</code>, <code>.sum()</code>, <code>.at(id)</code>. Reductions skip the device itself.</p>
-<p>Library: <code>hopsTo</code>, <code>distanceTo</code>, <code>broadcast</code>, <code>collectSum</code>, <code>isLeader</code>, <code>networkMax</code>, <code>networkMin</code>, <code>neighbourCount</code>, <code>rounds</code>, <code>countdown</code>, <code>minId</code>.</p>
+<p>Library: <code>hopsTo</code>, <code>distanceTo</code>, <code>broadcast</code>, <code>collect</code>, <code>collectSum</code>, <code>isLeader</code>, <code>networkMax</code>, <code>networkMin</code>, <code>neighbourCount</code>, <code>rounds</code>, <code>countdown</code>, <code>minId</code>.</p>
+<p>config.js: <code>nodes</code>, <code>layout</code>, <code>range</code>, <code>sources</code>, <code>obstacles</code>, <code>period</code>, <code>sensors</code>. As on a radio: <code>loss</code>, <code>skip</code>, <code>ttl</code>, and <code>target: 'ble'</code> for Bluetooth messages (hover a node to see them).</p>
 <p>Aggregate code under <code>if</code>, <code>?:</code>, <code>&amp;&amp;</code> or <code>||</code> needs <code>branch(cond, () =&gt; ..., () =&gt; ...)</code>: the line under the editor warns when it is missing.</p>
+<p>Everything in detail: <a href="reference.html">Reference</a>.</p>
 </details>
 </main>
 <script src="../src/core.js"></script>

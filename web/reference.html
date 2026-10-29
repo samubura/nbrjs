@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference · NbrJS</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<main class="page">
+<h1>Reference</h1>
+<p>Everything a program can use. <code>require('nbrjs').globals()</code> makes the operators globals, <code>require('nbrjs/lib').globals()</code> the library; the playground does both for you.</p>
+
+<h2>Operators</h2>
+<div class="table"><table>
+<tr><th>Operator</th><th>What it does</th></tr>
+<tr><td><code>nbr(v)</code></td><td>The field of <code>v</code> on the neighbours.</td></tr>
+<tr><td><code>rep(init, (prev) =&gt; ...)</code></td><td>State across rounds, local: sends nothing.</td></tr>
+<tr><td><code>share(init, (n) =&gt; ...)</code></td><td>Returns and sends the same value; <code>n</code> is the field of what the neighbours sent.</td></tr>
+<tr><td><code>xc(init, (n) =&gt; ...)</code></td><td>The primitive: the result is both kept and sent, and may be a field, a value per neighbour.</td></tr>
+<tr><td><code>retsend(ret, send)</code></td><td>In <code>xc</code>, keep <code>ret</code> and send <code>send</code>.</td></tr>
+<tr><td><code>branch(c, () =&gt; a, () =&gt; b)</code></td><td>Runs one side; devices on different sides do not see each other. <code>b</code> is optional.</td></tr>
+<tr><td><code>align(key, () =&gt; ...)</code></td><td>Aligns by key instead of position: for loops and dynamic structures.</td></tr>
+<tr><td><code>aggregate(name, fn)</code></td><td>Aligns calls of <code>fn</code> by name: different functions never share messages. No cost in bytes.</td></tr>
+<tr><td><code>id()</code></td><td>The device id (a number on Bluetooth).</td></tr>
+<tr><td><code>sense(name)</code></td><td>A local sensor, from <code>sensors()</code> in the config.</td></tr>
+<tr><td><code>nbrSense(name)</code></td><td>A field measured per neighbour: <code>'range'</code> (distance), <code>'rssi'</code> on Bluetooth.</td></tr>
+</table></div>
+<p>The initial value fixes the shape of objects: <code>{dist: Infinity, value: v}</code> travels as <code>[dist, value]</code>, and a field that is not in it is not sent. Aggregate code under <code>if</code>, <code>?:</code>, <code>&amp;&amp;</code> or <code>||</code> needs <code>branch</code> (<a href="05-branch.html">chapter 5</a>).</p>
+
+<h2>Fields</h2>
+<div class="table"><table>
+<tr><th>Member</th><th>What it does</th></tr>
+<tr><td><code>.self</code></td><td>The device's own value.</td></tr>
+<tr><td><code>.at(id)</code></td><td>The value for one neighbour.</td></tr>
+<tr><td><code>.map((v, id) =&gt; ...)</code></td><td>A new field, value by value.</td></tr>
+<tr><td><code>.zip(other, (a, b) =&gt; ...)</code></td><td>Combines two fields (or a field and a value).</td></tr>
+<tr><td><code>.reduce((acc, v) =&gt; ..., init)</code></td><td>Folds the neighbours' values, the device itself excluded. <code>Math.min</code> and <code>Math.max</code> work as reducers.</td></tr>
+<tr><td><code>.min()</code>, <code>.max()</code>, <code>.sum()</code></td><td>Shorthands; an optional argument is the result with no neighbours.</td></tr>
+</table></div>
+
+<h2>Library</h2>
+<div class="table"><table>
+<tr><th>Function</th><th>What it does</th></tr>
+<tr><td><code>hopsTo(source, max)</code></td><td>Hops to the nearest source. Beyond <code>max</code> (optional), <code>Infinity</code>: that stops the climb when a source goes away.</td></tr>
+<tr><td><code>distanceTo(source, metric, max)</code></td><td>Distance along the network; <code>metric</code> defaults to <code>nbrSense('range')</code>.</td></tr>
+<tr><td><code>broadcast(source, value, metric)</code></td><td>The value of the nearest source, everywhere.</td></tr>
+<tr><td><code>collect(distance, value, accumulate, none)</code></td><td>Accumulates towards the source along <code>distance</code>: <code>collect(d, v, Math.max, -Infinity)</code> is the largest value. <code>none</code> must leave a value unchanged.</td></tr>
+<tr><td><code>collectSum(distance, value)</code></td><td>The sum, at the source: <code>collectSum(hopsTo(s), 1)</code> counts the devices.</td></tr>
+<tr><td><code>isLeader(radius, metric)</code></td><td>Spread-out leaders: never two neighbouring ones, most about <code>radius</code> apart.</td></tr>
+<tr><td><code>networkMax(v)</code>, <code>networkMin(v)</code></td><td>The largest / smallest value in the network (a past maximum stays).</td></tr>
+<tr><td><code>neighbourCount()</code>, <code>rounds()</code>, <code>countdown(n)</code></td><td>Neighbours, rounds so far, a countdown that stops at 0.</td></tr>
+<tr><td><code>minId(field, below)</code></td><td>The id of the neighbour with the smallest value, or <code>null</code>.</td></tr>
+</table></div>
+
+<h2>Running: <code>start(program, config)</code></h2>
+<p>Every target takes <code>target</code>, <code>period</code> (ms between rounds), <code>sensors(id)</code> (the values for <code>sense</code>) and <code>onResult(value, id)</code>.</p>
+<div class="table"><table>
+<tr><th>Target</th><th>Options</th></tr>
+<tr><td><code>'ble'</code><br>Puck.js, ESP32</td><td><code>ttl</code> (s a silent neighbour is kept, 3 periods), <code>scan</code> (ms of listening per period, 400), <code>minRssi</code>, <code>txPower</code> (RSSI at 1 m, −60), <code>chunks</code> (adverts a message over 23 bytes may take, 4), <code>group</code>.</td></tr>
+<tr><td><code>'udp'</code><br>ESP32 on WiFi, Node</td><td><code>wifi: {ssid, password}</code>, <code>position: () =&gt; [x, y]</code> and <code>range</code> for a spatial neighbourhood, <code>port</code> (4210), <code>address</code>, <code>id</code>, <code>ttl</code>, <code>group</code>.</td></tr>
+<tr><td><code>'sim'</code><br>browser, Node</td><td><code>nodes</code>, <code>layout</code> (<code>'random'</code>, <code>'grid'</code>, <code>'line'</code>), <code>range</code>, <code>seed</code>, <code>loss</code>, <code>skip</code>, <code>ttl</code> (rounds); <code>sensors(id, x, y, round)</code>.</td></tr>
+<tr><td><code>'host'</code><br>a board and a PC</td><td>The PC runs the rounds and simulates the neighbours: see the <a href="puck.html">Puck.js demo</a>.</td></tr>
+</table></div>
+<p>In the playground's config.js, <code>sources</code> and <code>obstacles</code> set the initial sources and obstacles, and <code>target: 'ble'</code> simulates with Bluetooth messages (<a href="09-real-networks.html">chapter 9</a>).</p>
+
+<h2>Under the hood</h2>
+<div class="table"><table>
+<tr><th>Function</th><th>What it does</th></tr>
+<tr><td><code>device(id, hashed)</code></td><td>A device: <code>.round(program, inbox, sensors, nbrSensors)</code> runs one round and returns <code>{value, message}</code>. With <code>hashed</code>, message keys are 2-byte hashes.</td></tr>
+<tr><td><code>encode(msg)</code>, <code>decode(str)</code></td><td>Messages as JSON, keeping <code>Infinity</code> and <code>NaN</code>.</td></tr>
+<tr><td><code>sim.network(pos, range, opts)</code></td><td>A simulated network: <code>.step(program, sensors)</code>. <code>opts</code>: <code>codec</code>, <code>loss</code>, <code>skip</code>, <code>ttl</code>. <code>.collisions</code> lists operators that share a hashed name.</td></tr>
+<tr><td><code>sim.layout(kind, n, seed)</code></td><td>Positions for <code>n</code> nodes.</td></tr>
+<tr><td><code>sim.bleCodec(chunks)</code></td><td>The Bluetooth format, for <code>opts.codec</code>.</td></tr>
+</table></div>
+
+<h2>Tools</h2>
+<ul>
+  <li><b>Alignment check</b> (<code>src/check.js</code>): the playground and the bundler warn about aggregate code under <code>if</code>/<code>?:</code>, in loops or <code>.map()</code>, and about functions picked at run time without <code>aggregate</code>.</li>
+  <li><b>Bundler</b>: <code>npx nbrjs bundle app.js &gt; app.bundle.js</code> puts the modules and the program in one file, for the Espruino IDE or CLI.</li>
+  <li><b>Types</b>: TypeScript declarations in <code>types/</code>, for editors; <code>/// &lt;reference types="nbrjs/types/globals" /&gt;</code> for the globals.</li>
+</ul>
+</main>
+<script src="site.js"></script>

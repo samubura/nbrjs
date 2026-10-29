@@ -9,9 +9,10 @@
     ['05-branch.html', '5 · Alignment and branches'],
     ['06-xc.html', '6 · xc: one message per neighbour'],
     ['07-sensing.html', '7 · Sensing and acting'],
-    ['08-devices.html', '8 · On devices']
+    ['08-devices.html', '8 · On devices'],
+    ['09-real-networks.html', '9 · Real networks']
   ];
-  var SECTIONS = [['course.html', 'Course'], ['playground.html', 'Playground'], ['esp32.html', 'ESP32'], ['puck.html', 'Puck.js demo']];
+  var SECTIONS = [['course.html', 'Course'], ['playground.html', 'Playground'], ['reference.html', 'Reference'], ['esp32.html', 'ESP32'], ['puck.html', 'Puck.js demo']];
   var here = location.pathname.split('/').pop() || 'index.html';
   var cur = COURSE.findIndex(function (s) { return s[0] === here; });
   var section = cur >= 0 ? 'course.html' : here;
@@ -82,7 +83,7 @@
       program: prog ? prog.textContent.trim() : '',
       tabs: !!conf,
       config: conf ? conf.textContent.trim() : {
-        target: 'sim', layout: d.layout, nodes: d.nodes && +d.nodes, range: d.range && +d.range,
+        target: d.target || 'sim', loss: d.loss && +d.loss, skip: d.skip && +d.skip, layout: d.layout, nodes: d.nodes && +d.nodes, range: d.range && +d.range,
         sources: d.sources === '' ? [] : ints(d.sources), obstacles: ints(d.obstacles)
       },
       height: d.height && +d.height, autoplay: d.autoplay !== 'false'

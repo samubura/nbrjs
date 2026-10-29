@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · Real networks · NbrJS</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<div class="layout">
+<nav id="toc"></nav>
+<main>
+<h1>9 · Real networks</h1>
+<p class="lead">On a radio, messages get lost, devices fall out of step, messages have a size limit and numbers get rounded. The simulator can do all of this, so you can see it before flashing a board.</p>
+
+<h2>Lost messages, missed rounds</h2>
+<p>In config.js, <code>loss: 0.3</code> loses 30% of the messages and <code>skip: 0.3</code> makes devices miss 30% of their rounds. As on a board, a device keeps the last message it heard from each neighbour, and forgets a neighbour that stays silent for <code>ttl</code> rounds (3).</p>
+<div class="pg-embed" data-nodes="40" data-sources="0" data-loss="0.3" data-skip="0.3" data-test="changes">
+<script type="text/plain">
+var program = () => hopsTo(sense('source'));
+</script>
+</div>
+<p>The gradient still gets there, more slowly. Now and then a node loses its best neighbour for a few rounds and its value rises for a moment: that happens on real networks too.</p>
+
+<h2>When a source goes away</h2>
+<p>Click the source to switch it off. The values climb by one every round, for ever: each node trusts its neighbours, which trust it back. With a <b>maximum</b>, a value over it becomes <code>Infinity</code> and the climb stops:</p>
+<div class="pg-embed" data-nodes="40" data-sources="0">
+<script type="text/plain">
+var program = () => hopsTo(sense('source'), 15);
+</script>
+</div>
+<p>Pick a maximum a little above the longest distance you expect: below it, far nodes would lose the source. <code>distanceTo(source, metric, max)</code> works the same way.</p>
+
+<h2>The Bluetooth format</h2>
+<p>With <code>target: 'ble'</code> in config.js, the simulator sends the same binary messages as a board: decimals as 32-bit floats, operator names as 2-byte hashes, ids as wide as real ones. A message over 23 bytes goes in several adverts, sent in turn: hover a node to see them.</p>
+<div class="pg-embed" data-nodes="30" data-sources="0" data-target="ble">
+<script type="text/plain">
+var program = () => [hopsTo(sense('source')), distanceTo(sense('source')), broadcast(sense('source'), 'hi'), networkMax(id())];
+</script>
+</div>
+<p>Each advert holds whole operators. A neighbour that misses one keeps those operators' values from the round before; with <code>loss</code>, each advert can be lost on its own. Up to 4 adverts fit in a listening window, about 90 bytes: what does not fit is left out, and a board says so on its console. If two operators get the same 2-byte name, the playground says so too.</p>
+
+<h2>Decimals change on the way</h2>
+<p>A decimal number does not arrive exactly as it left: over Bluetooth it becomes a 32-bit float (about 7 digits), and Espruino's JSON keeps fewer digits than the browser's. So never compare with <code>===</code> a decimal received from a neighbour, for example to recognise a value of your own. Use integers for that, which always arrive intact: <code>Math.floor(Math.random() * 8192)</code> rather than <code>Math.random()</code>.</p>
+
+<h2>Several programs in one room</h2>
+<p>Devices running different programs would mix their messages. Give each program a group, and devices only hear their own:</p>
+<pre><code>start(program, { target: 'ble', group: 'swarm', period: 1000 });</code></pre>
+<p>It costs no bytes: the group changes the first byte of every message. Over WiFi it works the same way, or you can use a different <code>port</code>.</p>
+
+<h2>Try it</h2>
+<p class="task">1. With <code>loss: 0.5</code>, how much slower does the gradient settle? And with a <code>ttl</code> of 10?</p>
+<p class="task">2. Count the devices that reach the source, show the count everywhere, and keep it from climbing when the source goes away.</p>
+<div class="pg-embed" data-nodes="40" data-sources="0" data-loss="0.2" data-test="changes">
+<script type="text/plain">
+var program = () => hopsTo(sense('source'));
+</script>
+</div>
+<details><summary>Solutions</summary>
+<pre><code>var program = () => {
+  var source = sense('source'), d = hopsTo(source, 20);
+  return broadcast(source, collectSum(d, 1));
+};</code></pre>
+<p>For the first one, add <code>loss: 0.5</code> and then <code>ttl: 10</code> to config.js (the <b>config.js</b> tab of the playground): a longer ttl rides out the losses, but forgets a neighbour that has really gone later.</p>
+</details>
+<footer id="pager"></footer>
+</main>
+</div>
+<script src="../src/core.js"></script>
+<script src="../src/sim.js"></script>
+<script src="../src/ble.js"></script>
+<script src="../src/lib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
+<script src="../src/check.js"></script>
+<script src="playground.js"></script>
+<script src="site.js"></script>

@@ -177,7 +177,7 @@
     var status = q('.pg-status'), info = q('.pg-info'), roundEl = q('.pg-round');
     var range = q('[data-a=range]'), speed = q('[data-a=speed]'), play = q('[data-a=play]');
 
-    var cfg, pos, sensors, net, program, out = {}, rounds = 0, T = null, remote = null;
+    var cfg, cfgNote = '', pos, sensors, net, program, out = {}, rounds = 0, T = null, remote = null;
     var playing = o.autoplay !== false, visible = true, hover = null, drag = null;
 
     var overBle = function () { return !!cfg && cfg.target === 'ble' && !!window.nbrjsBle; };
@@ -187,7 +187,7 @@
     };
     var restart = function () {
       // target 'ble': messages in the BLE format, so float32, hashed paths and the advert limits show here.
-      net = S.network(pos, +range.value, { codec: overBle() ? nbrjsBle.sim : null, loss: cfg.loss, skip: cfg.skip, ttl: cfg.ttl });
+      net = S.network(pos, +range.value, { codec: overBle() ? S.bleCodec() : null, loss: cfg.loss, skip: cfg.skip, ttl: cfg.ttl });
       if (remote) net.devices[remote.id] = remote;
       out = {};
       rounds = 0;
@@ -224,7 +224,7 @@
     var loadProgram = function () {
       try {
         program = boot(progEl.value);
-        setStatus(check(progEl.value).join(' · '));
+        setStatus(check(progEl.value).join(' · ') || cfgNote);
         restart();
       } catch (e) {
         setStatus('program.js: ' + e.message, true);
@@ -233,8 +233,9 @@
     var loadConfig = function () {
       try {
         cfg = typeof o.config === 'object' && !tabs ? o.config : evalConfig(confEl.value);
-        setStatus(overBle() ? "config.js: target 'ble', simulated with Bluetooth messages (binary, 23 bytes per advert, up to 4 adverts)" :
-          cfg.target && cfg.target !== 'sim' ? "config.js: target '" + cfg.target + "' runs on devices; simulating it here" : '');
+        cfgNote = overBle() ? "config.js: target 'ble', simulated with Bluetooth messages (binary, 23 bytes per advert, up to 4 adverts)" :
+          cfg.target && cfg.target !== 'sim' ? "config.js: target '" + cfg.target + "' runs on devices; simulating it here" : '';
+        setStatus(cfgNote);
         reset();
       } catch (e) {
         setStatus('config.js: ' + e.message, true);
@@ -249,6 +250,8 @@
       try {
         out = net.step(program, sensors);
         rounds++;
+        var c = net.collisions[0];
+        if (c) setStatus('BLE: ' + c[0] + ' and ' + c[1] + ' share a 2-byte name and would mix; rename an aggregate() or align() key', true);
       } catch (e) {
         setStatus('round ' + (rounds + 1) + ': ' + e.message, true);
         setPlaying(false);

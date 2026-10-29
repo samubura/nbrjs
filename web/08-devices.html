@@ -44,10 +44,7 @@ var program = () => hopsTo(sense('source'));
   <li>A message over 23 bytes is split into up to 4 adverts that the board sends in turn, each with whole operators and 22 bytes of room: about 90 bytes in all. A neighbour that misses one of them keeps those operators' values from the round before. The limit follows what a neighbour hears while listening (<code>scan</code>, 400 ms, at one advert every 100 ms); <code>chunks</code> changes it. What does not fit is left out, and the console says so.</li>
   <li>Over WiFi (<code>'udp'</code>) there is no such limit.</li>
 </ul>
-<p>To try a program with the real Bluetooth format, write <code>target: 'ble'</code> in the playground's config.js: the simulator then sends the same binary messages as a board, rounding and splitting included; with <code>loss: 0.2</code> each advert can be lost on its own. Hover a node to see what it actually sends.</p>
-
-<h2>Decimals change on the way</h2>
-<p>A decimal number does not arrive exactly as it left: over Bluetooth it becomes a 32-bit float (about 7 digits), and Espruino's JSON keeps fewer digits than the browser's. So never compare with <code>===</code> a decimal received from a neighbour, for example to recognise a value of your own. Use integers for that, which always arrive intact: <code>Math.floor(Math.random() * 8192)</code> rather than <code>Math.random()</code>.</p>
+<p>To see what a program sends over Bluetooth, and how it copes with lost messages, see <a href="09-real-networks.html">chapter 9</a>.</p>
 
 <h2>Uploading</h2>
 <p>From the <a href="playground.html">playground</a>, in Chrome or Edge: <b>To device ↗</b>, pick the network, then <b>Upload via Bluetooth</b> or <b>via USB</b>. The first time, the library is installed in the board's flash memory, where it runs without using much RAM; after that only the program travels. With <b>Save</b> the program starts by itself at every power-up.</p>

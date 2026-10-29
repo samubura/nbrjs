@@ -132,3 +132,10 @@ details summary { cursor: pointer; font-weight: 600; }
 .pg-export details { margin-top: 14px; }
 .pg-dialog-bar button:disabled { opacity: .5; cursor: default; }
 .readings { font-family: var(--mono); font-size: 14px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; margin: 14px 0 0; }
+
+/* Reference tables: wide ones scroll on their own on phones. */
+.table { overflow-x: auto; margin: 1rem 0; }
+.table table { border-collapse: collapse; width: 100%; font-size: 15px; }
+.table th, .table td { text-align: left; vertical-align: top; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.table th { color: var(--dim); font-weight: 600; }
+.table td:first-child { white-space: nowrap; }
