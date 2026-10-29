@@ -30,6 +30,7 @@ a [playground](https://samubura.github.io/nbrjs/web/playground.html) that also u
 
 - **Code:** ~3 KB minified. When installed in a board's `Storage`, as the playground does, it runs from flash: the core takes about 320 variables, against 475 for the same code uploaded as text (Espruino Linux build).
 - **BLE messages:** binary, with 2-byte path hashes. A hop gradient is 3 bytes, a gradient inside a `branch` 6 bytes, and the 23-byte advert fits 5–7 operators.
+- **Objects:** `share({dist: Infinity, value: v}, ...)` sends `[dist, value]`, without field names. Every device runs the same program, so the receiver rebuilds the object from the operator's initial value, which also fixes its shape.
 - **Tests:** the suite runs on the Espruino interpreter in CI, on the minified bundle that ships to devices.
 
 ## API

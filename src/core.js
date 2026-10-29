@@ -86,20 +86,36 @@
     try { return fn(); } finally { exit(); }
   }
 
+  // Objects travel as arrays of their values, in the order of init's keys: every device runs the
+  // same program, so the receiver rebuilds them from its own init. {dist: 3, value: 'a'} costs the
+  // bytes of [3, 'a']. Keys that init lacks are not sent.
+  function isObj(v) {
+    return v !== null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Field);
+  }
+  function wire(v, t) {
+    return isObj(t) && isObj(v) ? Object.keys(t).map(function (k) { return wire(v[k], t[k]); }) : v;
+  }
+  function unwire(v, t) {
+    if (!isObj(t) || !Array.isArray(v)) return v;
+    var o = {};
+    Object.keys(t).forEach(function (k, i) { o[k] = unwire(v[i], t[k]); });
+    return o;
+  }
+
   function xc(init, fn) {
     var c = ctx, p = next('x'), pk = c.k(p), o = {};
     for (var i = 0; i < c.dom.length; i++) {
       var j = c.dom[i], m = c.inbox[j][pk];
-      if (m) o[j] = m[1] && c.key in m[1] ? m[1][c.key] : m[0];
+      if (m) o[j] = unwire(m[1] && c.key in m[1] ? m[1][c.key] : m[0], init);
     }
     o[c.key] = p in c.prev ? c.prev[p] : init;
     var r = fn(new Field(init, o, o));
     var ret = r instanceof RetSend ? r.ret : r;
     var s = lift(r instanceof RetSend ? r.send : r);
     var ov = null;
-    for (var k in s.o) if (k !== c.key && s.o[k] !== s.d) { ov = ov || {}; ov[k] = s.o[k]; }
+    for (var k in s.o) if (k !== c.key && s.o[k] !== s.d) { ov = ov || {}; ov[k] = wire(s.o[k], init); }
     c.state[p] = s.self;
-    c.msg[pk] = ov ? [s.d, ov] : [s.d];
+    c.msg[pk] = ov ? [wire(s.d, init), ov] : [wire(s.d, init)];
     return ret;
   }
 

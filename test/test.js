@@ -115,6 +115,17 @@ check('lib: isLeader picks spread-out leaders', lead.length > 0 && lead.every(fu
   return lead.every(function (b) { return a === b || Math.abs(a - b) > 1; }); // never two neighbouring leaders
 }), true);
 
+var objNet = line(2), objOut = run(objNet, function () {
+  return nbr({ who: id(), hops: 1 }).map(function (p) { return p.who + ':' + p.hops; }).reduce(cat, '');
+}, 2);
+check('objects travel as arrays of values and arrive as objects',
+  [objOut, A.encode(objNet.devices[0].round(function () { return nbr({ who: 'a', hops: 1 }); }, {}).message)],
+  [{ 0: '1:1', 1: '0:1' }, '{"x0":[["a",1]]}']);
+var leaderNet = sim.network(sim.layout('random', 40, 42), 1.5);
+var lp = function () { return L.broadcast(L.isLeader(3), id()); };
+var settled = JSON.stringify(run(leaderNet, lp, 60));
+check('lib: isLeader settles, with loops in the network', JSON.stringify(run(leaderNet, lp, 20)), settled);
+
 // Hashed message keys (BLE) compute the same as readable paths.
 var hashedNet = line(5);
 for (var hi in hashedNet.devices) hashedNet.devices[hi] = A.device(hi, true);

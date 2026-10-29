@@ -7,8 +7,8 @@
 
   // Id of the neighbour with the smallest value, or null if none is below `below` (Infinity).
   var minId = exports.minId = function (field, below) {
-    return field.map(function (v, id) { return [v, id]; })
-      .reduce(function (best, p) { return p[0] < best[0] ? p : best; }, [below === undefined ? Infinity : below, null])[1];
+    return field.map(function (v, id) { return { value: v, id: id }; })
+      .reduce(function (best, c) { return c.value < best.value ? c : best; }, { value: below === undefined ? Infinity : below, id: null }).id;
   };
 
   // Hops to the nearest source; Infinity where no source is reachable.
@@ -24,11 +24,12 @@
   // The value of the nearest source, everywhere; undefined where no source is reachable.
   exports.broadcast = A.aggregate('broadcast', function (source, value, metric) {
     var m = metricOr(metric);
-    return share([Infinity, undefined], function (n) {
-      if (source) return [0, value];
-      return n.zip(m, function (p, r) { return [p[0] + r, p[1]]; })
-        .reduce(function (best, p) { return p[0] < best[0] ? p : best; }, [Infinity, undefined]);
-    })[1];
+    var none = { dist: Infinity, value: undefined };
+    return share(none, function (n) {
+      if (source) return { dist: 0, value: value };
+      return n.zip(m, function (p, r) { return { dist: p.dist + r, value: p.value }; })
+        .reduce(function (best, p) { return p.dist < best.dist ? p : best; }, none);
+    }).value;
   });
   // Sums value toward the source along `distance` (e.g. hopsTo(source)): each device sends its
   // partial sum to the neighbour closest to the source only. The source gets the total.
@@ -49,11 +50,18 @@
   // Spread-out leaders: true on devices that win a random draw against the best candidate heard
   // within radius. Two leaders are never neighbours; most are about radius apart.
   exports.isLeader = A.aggregate('isLeader', function (radius, metric) {
-    var m = metricOr(metric), me = rep(Math.random(), function (x) { return x; });
-    return share([me, 0], function (n) {
-      return n.zip(m, function (p, r) { return [p[0], p[1] + r]; })
-        .reduce(function (best, p) { return p[1] < radius && p[0] < best[0] ? p : best; }, [me, 0]);
-    })[0] === me;
+    // An integer draw: it must come back exact from neighbours (Espruino's JSON and BLE's float32 round floats).
+    var m = metricOr(metric), me = rep(Math.floor(Math.random() * 1e6), function (x) { return x; });
+    var mine = { draw: me, dist: 0 };
+    // The smallest draw heard within radius. For the same draw heard from several sides, the shortest
+    // path: otherwise its distance grows round after round and the draw keeps leaving and coming back.
+    return share(mine, function (n) {
+      return n.zip(m, function (p, r) { return { draw: p.draw, dist: p.dist + r }; })
+        .reduce(function (best, p) {
+          var better = p.draw < best.draw || p.draw === best.draw && p.dist < best.dist;
+          return p.dist < radius && better ? p : best;
+        }, mine);
+    }).draw === me;
   });
   exports.neighbourCount = A.aggregate('neighbourCount', function () { return nbr(1).sum(); });
   exports.rounds = A.aggregate('rounds', function () { return rep(0, function (c) { return c + 1; }); });

@@ -20,12 +20,12 @@ var program = () => hops(sense('source'));` },
 `var program = () => nbr(1).sum();` },
 
   { name: 'Broadcast (nearest source)', program:
-`// [distance, source id] pairs: every node learns which source is nearest.
-var broadcast = (src, v) => share([Infinity, v], (n) => src ? [0, v] :
-  n.zip(nbrSense('range'), (p, r) => [p[0] + r, p[1]])
-   .reduce((best, p) => p[0] < best[0] ? p : best, [Infinity, null]));
+`// {dist, value} pairs: every node learns which source is nearest.
+var broadcast = (src, v) => share({ dist: Infinity, value: v }, (n) => src ? { dist: 0, value: v } :
+  n.zip(nbrSense('range'), (p, r) => ({ dist: p.dist + r, value: p.value }))
+   .reduce((best, p) => p.dist < best.dist ? p : best, { dist: Infinity, value: null }));
 
-var program = () => broadcast(sense('source'), id())[1];`,
+var program = () => broadcast(sense('source'), id()).value;`,
     config:
 `return {
   target: 'sim',
@@ -68,8 +68,8 @@ return {
 var gradient = (src) => share(Infinity, (d) => src ? 0 : d.zip(nbrSense('range'), (a, b) => a + b).min());
 
 var collect = (dist, v) => {
-  var parent = nbr(dist).map((d, id) => [d, id])
-    .reduce((best, p) => p[0] < best[0] ? p : best, [dist, null])[1];
+  var parent = nbr(dist).map((d, id) => ({ dist: d, id: id }))
+    .reduce((best, c) => c.dist < best.dist ? c : best, { dist: dist, id: null }).id;
   return xc(0, (n) => {
     var total = n.sum(v);
     return retsend(total, n.map((x, id) => id === parent ? total : 0));
