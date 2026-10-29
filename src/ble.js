@@ -110,6 +110,7 @@
   // opts: {period ms (1000), ttl s (3 periods), scan: ms of listening per period (400; >= period
   //        listens all the time), minRssi: ignore weaker neighbours (dBm), txPower: RSSI at 1 m (-60),
   //        group: only hear devices with the same group (e.g. the program's name),
+  //        hashSeed: another hash for operator names, when two collide (the playground suggests one),
   //        chunks: adverts a message over 23 bytes may take (as many as a listening window hears,
   //        one advert every 100 ms: 4 by default),
   //        sensors: (id) => ({...}), onResult: (value, id) => ...}
@@ -119,7 +120,8 @@
     var period = opts.period || 1000, ttl = opts.ttl || 3 * period / 1000, scan = opts.scan || 400;
     var tx = opts.txPower || -60, minRssi = opts.minRssi || -200;
     var chunks = opts.chunks || Math.max(1, Math.floor(Math.min(scan, period) / 100));
-    var id = shortId(NRF.getAddress()), dev = A.device(id, true), magic = A.magic(opts.group);
+    var seed = opts.hashSeed, hashed = seed ? function (p) { return A.hash(p, seed); } : true;
+    var id = shortId(NRF.getAddress()), dev = A.device(id, hashed), magic = A.magic(opts.group);
     // Chunked adverts start with the magic byte + 128, then the sender's round number.
     var chunked = String.fromCharCode(magic.charCodeAt(0) | 128), count = 0;
     // parts[j]: [round, entries heard in it, entries of the round before], so a chunk not heard yet

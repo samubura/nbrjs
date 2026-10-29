@@ -73,13 +73,26 @@
       }
     };
     // With hashed keys, net.collisions lists the paths that share one: their operators would mix.
-    var paths = {}, key = function (p) {
-      var h = A.hash(p);
+    var paths = {}, seen = {}, key = function (p) {
+      var h = A.hash(p, wire.seed);
+      seen[p] = 1;
       if (h in paths && paths[h] !== p && paths[h] !== null) { net.collisions.push([paths[h], p]); paths[h] = null; }
       else if (!(h in paths)) paths[h] = p;
       return h;
     };
     net.collisions = [];
+    // The smallest hash seed under which none of the paths seen so far collide.
+    net.freeSeed = function () {
+      for (var s = 1; s < 1000; s++) {
+        var hs = {}, ok = true;
+        for (var p in seen) {
+          var h = A.hash(p, s);
+          if (hs[h]) { ok = false; break; }
+          hs[h] = 1;
+        }
+        if (ok) return s;
+      }
+    };
     ids.forEach(function (id) { net.devices[id] = A.device(wire.id ? wire.id(id) : id, wire.hashed && key); });
     return net;
   };
@@ -87,15 +100,18 @@
   // The BLE wire format, for network(pos, range, {codec: bleCodec()}): hashed paths, float32 numbers,
   // ids as wide as real ones (node 3 is 40963), and messages over 23 bytes in up to `chunks` adverts
   // (4, as many as a 400 ms listening window hears) that the simulator hears or loses one by one.
+  // opts: {chunks, hashSeed}, as in start(..., {target: 'ble'}).
   // Here rather than in nbrjs/ble, which goes on the boards.
-  exports.bleCodec = function (chunks) {
+  exports.bleCodec = function (opts) {
+    opts = opts || {};
     var B = typeof nbrjsBle !== 'undefined' ? nbrjsBle : require('nbrjs/ble');
     return {
       hashed: true,
+      seed: opts.hashSeed,
       id: function (key) { return 40960 + +key; },
       encode: function (msg) {
         var data = B.pack(msg);
-        return data.length > 23 ? B.split(msg, chunks || 4) : data;
+        return data.length > 23 ? B.split(msg, opts.chunks || 4) : data;
       },
       decode: B.unpack
     };

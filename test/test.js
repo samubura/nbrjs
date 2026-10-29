@@ -222,6 +222,15 @@ check('ble hears neighbours and advertises compactly', [link.id, r.value[0], r.v
 var clash = sim.network(line(3).pos, 1.5, { codec: sim.bleCodec() }); // 'a0:k/x0' and 'a1:4634/x0' have the same 2-byte hash
 run(clash, function () { return [align('k', function () { return nbr(1).sum(); }), align(4634, function () { return nbr(2).sum(); })]; }, 2);
 check('sim over BLE: paths sharing a hash are reported', clash.collisions, [['a0:k', 'a1:4634'], ['a0:k/x0', 'a1:4634/x0']]);
+var seed = clash.freeSeed(), unclash = sim.network(line(3).pos, 1.5, { codec: sim.bleCodec({ hashSeed: seed }) });
+var clashing = function () { return [align('k', function () { return nbr(1).sum(); }), align(4634, function () { return nbr(2).sum(); })]; };
+check('sim over BLE: the suggested hashSeed removes the collision', [seed > 0, unclash.collisions, run(unclash, clashing, 3)[1]],
+  [true, [], [2, 4]]);
+
+var seeded = A.start(function () { return nbr(1).sum(); }, { target: 'ble', period: 1e6, scan: 1e6, hashSeed: 5 });
+seeded.round();
+seeded.stop();
+check('ble with hashSeed: names hashed with the seed', Object.keys(ble.unpack(adv.manufacturerData.slice(1))), [A.hash('x0', 5)]);
 
 // Messages over 23 bytes: chunks of whole entries, advertised in turn, merged by the receiver.
 var four = function () { return [nbr(1.5).sum(), nbr(2.5).sum(), nbr(3.5).sum(), nbr(4.5).sum()]; };

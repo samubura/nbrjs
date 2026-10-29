@@ -39,6 +39,8 @@ export interface StartConfig {
   onResult?: (value: any, id: string | number) => void;
   /** Devices only hear devices with the same group (ble, udp). */
   group?: string;
+  /** Another hash for operator names on BLE, when two collide: the same on every device. */
+  hashSeed?: number;
   [option: string]: any;
 }
 export interface Running { id?: string | number; round(): any; stop(): void; }
@@ -53,6 +55,6 @@ export interface Device {
 export function device(id: string | number, hashed?: boolean): Device;
 export function encode(msg: any): string;
 export function decode(str: string): any;
-export function hash(path: string): string;
+export function hash(path: string, seed?: number): string;
 export function magic(group?: string): string;
 export const targets: Record<string, { start(program: () => any, cfg: StartConfig): Running }>;

@@ -187,7 +187,7 @@
     };
     var restart = function () {
       // target 'ble': messages in the BLE format, so float32, hashed paths and the advert limits show here.
-      net = S.network(pos, +range.value, { codec: overBle() ? S.bleCodec() : null, loss: cfg.loss, skip: cfg.skip, ttl: cfg.ttl });
+      net = S.network(pos, +range.value, { codec: overBle() ? S.bleCodec({ chunks: cfg.chunks, hashSeed: cfg.hashSeed }) : null, loss: cfg.loss, skip: cfg.skip, ttl: cfg.ttl });
       if (remote) net.devices[remote.id] = remote;
       out = {};
       rounds = 0;
@@ -251,7 +251,8 @@
         out = net.step(program, sensors);
         rounds++;
         var c = net.collisions[0];
-        if (c) setStatus('BLE: ' + c[0] + ' and ' + c[1] + ' share a 2-byte name and would mix; rename an aggregate() or align() key', true);
+        if (c) setStatus('BLE: ' + c[0] + ' and ' + c[1] + ' share a 2-byte name and would mix: add hashSeed: ' + net.freeSeed() +
+          ' to config.js and to start() on the boards', true);
       } catch (e) {
         setStatus('round ' + (rounds + 1) + ': ' + e.message, true);
         setPlaying(false);

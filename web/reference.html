@@ -55,7 +55,7 @@
 <p>Every target takes <code>target</code>, <code>period</code> (ms between rounds), <code>sensors(id)</code> (the values for <code>sense</code>) and <code>onResult(value, id)</code>.</p>
 <div class="table"><table>
 <tr><th>Target</th><th>Options</th></tr>
-<tr><td><code>'ble'</code><br>Puck.js, ESP32</td><td><code>ttl</code> (s a silent neighbour is kept, 3 periods), <code>scan</code> (ms of listening per period, 400), <code>minRssi</code>, <code>txPower</code> (RSSI at 1 m, −60), <code>chunks</code> (adverts a message over 23 bytes may take, 4), <code>group</code>.</td></tr>
+<tr><td><code>'ble'</code><br>Puck.js, ESP32</td><td><code>ttl</code> (s a silent neighbour is kept, 3 periods), <code>scan</code> (ms of listening per period, 400), <code>minRssi</code>, <code>txPower</code> (RSSI at 1 m, −60), <code>chunks</code> (adverts a message over 23 bytes may take, 4), <code>group</code>, <code>hashSeed</code> (another hash for operator names, when two collide).</td></tr>
 <tr><td><code>'udp'</code><br>ESP32 on WiFi, Node</td><td><code>wifi: {ssid, password}</code>, <code>position: () =&gt; [x, y]</code> and <code>range</code> for a spatial neighbourhood, <code>port</code> (4210), <code>address</code>, <code>id</code>, <code>ttl</code>, <code>group</code>.</td></tr>
 <tr><td><code>'sim'</code><br>browser, Node</td><td><code>nodes</code>, <code>layout</code> (<code>'random'</code>, <code>'grid'</code>, <code>'line'</code>), <code>range</code>, <code>seed</code>, <code>loss</code>, <code>skip</code>, <code>ttl</code> (rounds); <code>sensors(id, x, y, round)</code>.</td></tr>
 <tr><td><code>'host'</code><br>a board and a PC</td><td>The PC runs the rounds and simulates the neighbours: see the <a href="puck.html">Puck.js demo</a>.</td></tr>
@@ -67,9 +67,9 @@
 <tr><th>Function</th><th>What it does</th></tr>
 <tr><td><code>device(id, hashed)</code></td><td>A device: <code>.round(program, inbox, sensors, nbrSensors)</code> runs one round and returns <code>{value, message}</code>. With <code>hashed</code>, message keys are 2-byte hashes.</td></tr>
 <tr><td><code>encode(msg)</code>, <code>decode(str)</code></td><td>Messages as JSON, keeping <code>Infinity</code> and <code>NaN</code>.</td></tr>
-<tr><td><code>sim.network(pos, range, opts)</code></td><td>A simulated network: <code>.step(program, sensors)</code>. <code>opts</code>: <code>codec</code>, <code>loss</code>, <code>skip</code>, <code>ttl</code>. <code>.collisions</code> lists operators that share a hashed name.</td></tr>
+<tr><td><code>sim.network(pos, range, opts)</code></td><td>A simulated network: <code>.step(program, sensors)</code>. <code>opts</code>: <code>codec</code>, <code>loss</code>, <code>skip</code>, <code>ttl</code>. <code>.collisions</code> lists operators that share a hashed name, <code>.freeSeed()</code> a <code>hashSeed</code> that avoids it.</td></tr>
 <tr><td><code>sim.layout(kind, n, seed)</code></td><td>Positions for <code>n</code> nodes.</td></tr>
-<tr><td><code>sim.bleCodec(chunks)</code></td><td>The Bluetooth format, for <code>opts.codec</code>.</td></tr>
+<tr><td><code>sim.bleCodec({chunks, hashSeed})</code></td><td>The Bluetooth format, for <code>opts.codec</code>.</td></tr>
 </table></div>
 
 <h2>Tools</h2>
