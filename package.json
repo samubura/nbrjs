@@ -25,7 +25,7 @@
     "NOTICE"
   ],
   "scripts": {
-    "test": "node test/test.js && node test/check.js",
+    "test": "node test/test.js && node test/check.js && node test/site.js",
     "test:espruino": "sh scripts/espruino-test.sh",
     "bundle": "node scripts/bundle.js",
     "site": "sh scripts/site.sh"

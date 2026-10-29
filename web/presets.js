@@ -13,7 +13,7 @@ var hops = (src) => share(Infinity, (d) => src ? 0 : d.min() + 1);
 
 var program = () => hops(sense('source'));` },
 
-  { name: 'Round counter (rep)', program:
+  { name: 'Round counter (rep)', test: 'changes', program:
 `var program = () => rep(0, (c) => c + 1);` },
 
   { name: 'Neighbour count (nbr)', program:
@@ -89,7 +89,7 @@ var program = () => {
   return broadcast(source, collectSum(hopsTo(source), 1));
 };` },
 
-  { name: 'Link age (xc)', program:
+  { name: 'Link age (xc)', test: 'changes', program:
 `// Each link counts how many rounds it has lasted: I send each neighbour back what it sent me, +1.
 // Drag a node elsewhere: its new links start again from 1.
 var program = () => xc(0, (n) => n.map((x) => x + 1)).min();` }

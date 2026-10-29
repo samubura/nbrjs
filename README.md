@@ -65,7 +65,7 @@ All targets take `period` (ms), `sensors(id)` (values for `sense()`) and `onResu
 
 | target | where | options |
 |---|---|---|
-| `ble` | Puck.js, ESP32 | `ttl` (s), `scan` (ms of listening per period, 400), `minRssi`, `txPower`. No infrastructure; `nbrSense('rssi')`, and `nbrSense('range')` estimated in metres |
+| `ble` | Puck.js, ESP32 | `ttl` (s), `scan` (ms of listening per period, 400), `minRssi`, `txPower`. No infrastructure; `nbrSense('rssi')`, and `nbrSense('range')` estimated in metres. In the playground, `target: 'ble'` simulates with the same binary messages (`sim.network(pos, range, require('nbrjs/ble').sim)`) |
 | `udp` | ESP32, Node | `wifi: {ssid, password}`, `position: () => [x, y]`, `range`, `port`, `address`. Broadcast over WiFi; with positions, neighbours are those within `range` |
 | `sim` | browser, Node | `nodes`, `layout` (`random`, `grid`, `line`), `range`; `nbrSense('range')` is the distance |
 | `host` | a board tethered to a PC | the PC runs the rounds and simulates the neighbours ([demo](https://samubura.github.io/nbrjs/web/puck.html)) |

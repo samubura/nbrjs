@@ -28,7 +28,7 @@ var program = () => id();
 
 <h2>Remembering: <code>rep</code></h2>
 <p>The program starts from scratch every round: local variables do not survive. For <b>state</b> use <code>rep(initial, f)</code>: in the first round <code>f</code> gets the initial value, then always the result of the previous round.</p>
-<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="">
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-test="changes">
 <script type="text/plain">
 // Counts rounds: 1, 2, 3, ...
 var program = () => rep(0, (c) => c + 1);
@@ -41,7 +41,7 @@ var program = () => rep(0, (c) => c + 1);
 <p class="task">1. A blinker: every node alternates <code>true</code> and <code>false</code> each round.</p>
 <p class="task">2. A countdown from 10 that stops at 0.</p>
 <p class="task">3. Each node starts from its own id (as a number: <code>+id()</code>) and counts up from there.</p>
-<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="">
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-test="changes">
 <script type="text/plain">
 // Your solution here
 var program = () => rep(false, (b) => b);

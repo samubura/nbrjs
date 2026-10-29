@@ -121,6 +121,9 @@ var objNet = line(2), objOut = run(objNet, function () {
 check('objects travel as arrays of values and arrive as objects',
   [objOut, A.encode(objNet.devices[0].round(function () { return nbr({ who: 'a', hops: 1 }); }, {}).message)],
   [{ 0: '1:1', 1: '0:1' }, '{"x0":[["a",1]]}']);
+check('equal objects for every neighbour send no overrides', A.encode(line(3).devices[1].round(function () {
+  return xc({ a: 1 }, function (n) { return n.map(function () { return { a: 2 }; }); });
+}, { 0: { x0: [[1]] }, 2: { x0: [[1]] } }).message), '{"x0":[[2]]}');
 var leaderNet = sim.network(sim.layout('random', 40, 42), 1.5);
 var lp = function () { return L.broadcast(L.isLeader(3), id()); };
 var settled = JSON.stringify(run(leaderNet, lp, 60));
@@ -136,6 +139,21 @@ check('hashed keys give the same results', run(hashedNet, grad, 6, srcs), run(li
 
 // Binary BLE format: round trip, and it is small.
 var ble = require('nbrjs/ble');
+// The simulator with the BLE format: per-neighbour overrides, float32, the 23-byte limit.
+var bleLine = function (n) { var l = line(n); return sim.network(l.pos, 1.5, ble.sim); };
+check('sim over BLE: collectSum counts the line', run(bleLine(5), function () {
+  var s = sense('source');
+  return L.collectSum(L.hopsTo(s), 1);
+}, 20, src0)[0], 5);
+var bleLeaders = sim.network(sim.layout('random', 40, 42), 1.5, ble.sim);
+var bleSettled = JSON.stringify(run(bleLeaders, lp, 60));
+check('sim over BLE: isLeader settles', JSON.stringify(run(bleLeaders, lp, 20)), bleSettled);
+check('sim over BLE: leader messages fit an advert', Object.keys(bleLeaders.messages).filter(function (i) {
+  return bleLeaders.messages[i] === '';
+}).length, 0);
+check('sim over BLE: a message over 23 bytes is not sent', run(bleLine(2), function () {
+  return nbr('a string much too long for an advert').reduce(count, 0);
+}, 2), { 0: 0, 1: 0 });
 var rich = {};
 rich[A.hash('b0.1')] = 1;
 rich[A.hash('b0.1/x0')] = [Infinity, { '00aa': 3, 'beef': -2.5 }];
@@ -148,7 +166,7 @@ var back = ble.unpack(ble.pack(rich));
 check('ble binary format round-trips', [A.encode(back), isNaN(back[A.hash('x1')][0])], [A.encode(rich), true]);
 var hop = {};
 hop[A.hash('x0')] = [7];
-check('ble message sizes', [ble.pack(hop).length, ble.pack(rich).length], [3, 49]);
+check('ble message sizes', [ble.pack(hop).length, ble.pack(rich).length], [3, 40]);
 
 // BLE transport against a fake NRF (no radio here): hears a neighbour, advertises a compact message.
 var adv = null, onScan = null;
@@ -169,7 +187,7 @@ onScan({ id: 'aa:bb:cc:dd:00:03 public', rssi: -50, manufacturer: 0x004c, manufa
 var r = link.round();
 link.stop();
 check('ble hears neighbours and advertises compactly', [link.id, r.value[0], r.value[1], ble.unpack(adv.manufacturerData.slice(1))[A.hash('x0')], adv.manufacturerData.length],
-  ['0001', '0002', 0.32, ['0001'], 1 + 2 + 2 + 6]);
+  ['0001', '0002', 0.32, ['0001'], 1 + 2 + 2 + 4]);
 
 // UDP over WiFi against a fake socket: hears a neighbour, ignores itself, broadcasts its message.
 var sent = null, onMsg = null;

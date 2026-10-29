@@ -50,8 +50,10 @@
   // Spread-out leaders: true on devices that win a random draw against the best candidate heard
   // within radius. Two leaders are never neighbours; most are about radius apart.
   exports.isLeader = A.aggregate('isLeader', function (radius, metric) {
-    // An integer draw: it must come back exact from neighbours (Espruino's JSON and BLE's float32 round floats).
-    var m = metricOr(metric), me = rep(Math.floor(Math.random() * 1e6), function (x) { return x; });
+    // An integer draw: it must come back exact from neighbours (Espruino's JSON and BLE's float32 round
+    // floats). Below 8192 it takes 2 bytes on BLE. ponytail: equal draws within radius (~0.5% with 10
+    // devices) give two nearby leaders; draw from a larger range if that matters.
+    var m = metricOr(metric), me = rep(Math.floor(Math.random() * 8192), function (x) { return x; });
     var mine = { draw: me, dist: 0 };
     // The smallest draw heard within radius. For the same draw heard from several sides, the shortest
     // path: otherwise its distance grows round after round and the draw keeps leaving and coming back.

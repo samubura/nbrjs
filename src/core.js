@@ -102,6 +102,12 @@
     return o;
   }
 
+  // Overrides are sent only where they differ from the default: by value for objects and arrays,
+  // which n.map() creates anew for every neighbour.
+  function differs(a, b) {
+    return a !== b && (typeof a !== 'object' || typeof b !== 'object' || exports.encode(a) !== exports.encode(b));
+  }
+
   function xc(init, fn) {
     var c = ctx, p = next('x'), pk = c.k(p), o = {};
     for (var i = 0; i < c.dom.length; i++) {
@@ -113,7 +119,7 @@
     var ret = r instanceof RetSend ? r.ret : r;
     var s = lift(r instanceof RetSend ? r.send : r);
     var ov = null;
-    for (var k in s.o) if (k !== c.key && s.o[k] !== s.d) { ov = ov || {}; ov[k] = wire(s.o[k], init); }
+    for (var k in s.o) if (k !== c.key && differs(s.o[k], s.d)) { ov = ov || {}; ov[k] = wire(s.o[k], init); }
     c.state[p] = s.self;
     c.msg[pk] = ov ? [wire(s.d, init), ov] : [wire(s.d, init)];
     return ret;

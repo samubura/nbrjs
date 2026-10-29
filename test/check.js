@@ -16,5 +16,11 @@ check('branch is fine', "var program = () => branch(sense('a'), () => nbr(1).sum
 check('local-only conditionals are fine', "var clamp = (x) => Math.max(0, x);\nvar program = () => sense('a') ? clamp(3) : 3;", 0);
 check('conditionals inside share are fine', "var program = () => share(Infinity, (d) => sense('s') ? 0 : d.min() + 1);", 0);
 check('early return without operators is fine', "var program = () => { if (sense('o')) return null; return hopsTo(true); };", 0);
+check('a function picked at run time', "var g = () => nbr(1).sum();\nvar h = () => rep(0, (c) => c + 1);\n" +
+  "var program = () => { var f = sense('a') ? g : h; return f(); };", 1);
+check('picking aggregate()-wrapped or library functions is fine', "var g = aggregate('g', () => nbr(1).sum());\n" +
+  "var program = () => { var f = sense('a') ? g : hopsTo; return f(true); };", 0);
+check('a wrapped function still needs branch under ?:', "var g = aggregate('g', () => nbr(1).sum());\n" +
+  "var program = () => sense('a') ? g() : 0;", 1);
 console.log(failed ? failed + ' FAILED' : 'ALL OK');
 if (failed) process.exit(1);

@@ -1,5 +1,6 @@
 // Tiny synchronous simulator (Node and browser, not for devices): devices at 2D positions,
-// neighbours within range. Messages go through encode/decode to mimic a real wire.
+// neighbours within range. Messages go through encode/decode to mimic a real wire: JSON, or
+// codec = {encode, decode, hashed} such as nbrjsBle.sim for the BLE format.
 (function (exports, A) {
   // Node positions {id: [x, y]}: 'line', 'grid', or a jittered grid ('random', seeded).
   exports.layout = function (kind, n, seed) {
@@ -13,8 +14,8 @@
     return pos;
   };
 
-  exports.network = function (pos, range) {
-    var ids = Object.keys(pos), msgs = {};
+  exports.network = function (pos, range, codec) {
+    var ids = Object.keys(pos), msgs = {}, wire = codec || A;
     var net = {
       pos: pos,       // mutable: move devices by editing it
       range: range,   // mutable too
@@ -30,17 +31,17 @@
             var d = Math.sqrt(dx * dx + dy * dy);
             if (i === j || d > net.range) return;
             dist[j] = d;
-            if (msgs[j]) inbox[j] = A.decode(msgs[j]);
+            if (j in msgs) inbox[j] = wire.decode(msgs[j]);
           });
           var r = net.devices[i].round(program, inbox, sensors && sensors[i], { range: dist });
           out[i] = r.value;
-          sent[i] = A.encode(r.message);
+          sent[i] = wire.encode(r.message);
         });
         net.messages = msgs = sent;
         return out;
       }
     };
-    ids.forEach(function (id) { net.devices[id] = A.device(id); });
+    ids.forEach(function (id) { net.devices[id] = A.device(id, wire.hashed); });
     return net;
   };
 

@@ -23,7 +23,7 @@
 
 <h2>Link age</h2>
 <p>I send each neighbour back what it sent me, plus one. Every pair of nodes keeps a private counter that grows as long as the link lasts. Each node shows the age of its newest link: <b>drag a node</b> elsewhere and its new links restart from 1.</p>
-<div class="pg-embed" data-nodes="30" data-sources="">
+<div class="pg-embed" data-nodes="30" data-sources="" data-test="changes">
 <script type="text/plain">
 var program = () => xc(0, (n) => n.map((x) => x + 1)).min();
 </script>

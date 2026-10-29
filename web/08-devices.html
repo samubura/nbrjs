@@ -39,10 +39,15 @@ var program = () => hopsTo(sense('source'));
 </div>
 <ul>
   <li>Integers are cheaper than decimals, which become 32-bit floats (5 bytes).</li>
+  <li>Objects travel as arrays of their values, without the field names: <code>{dist: 2.8, value: 'a'}</code> takes 9 bytes.</li>
   <li>With <code>xc</code>, each value specific to a neighbour adds about 3 bytes.</li>
   <li>When a message is over 23 bytes, the device says so on its console and sends an empty one: neighbours ignore it until it fits again.</li>
   <li>Over WiFi (<code>'udp'</code>) there is no such limit.</li>
 </ul>
+<p>To try a program with the real Bluetooth format, write <code>target: 'ble'</code> in the playground's config.js: the simulator then sends the same binary messages as a board, rounding included, and drops those over 23 bytes. Hover a node to see what it actually sends.</p>
+
+<h2>Decimals change on the way</h2>
+<p>A decimal number does not arrive exactly as it left: over Bluetooth it becomes a 32-bit float (about 7 digits), and Espruino's JSON keeps fewer digits than the browser's. So never compare with <code>===</code> a decimal received from a neighbour, for example to recognise a value of your own. Use integers for that, which always arrive intact: <code>Math.floor(Math.random() * 8192)</code> rather than <code>Math.random()</code>.</p>
 
 <h2>Uploading</h2>
 <p>From the <a href="playground.html">playground</a>, in Chrome or Edge: <b>To device ↗</b>, pick the network, then <b>Upload via Bluetooth</b> or <b>via USB</b>. The first time, the library is installed in the board's flash memory, where it runs without using much RAM; after that only the program travels. With <b>Save</b> the program starts by itself at every power-up.</p>

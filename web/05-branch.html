@@ -16,7 +16,7 @@
 
 <h2>What goes wrong with a plain <code>if</code></h2>
 <p>On this line nodes 3 and 4 are obstacles (in black, shift+click to change them). Obstacles should share 100 among themselves, the others 1, and each shows the largest value it sees:</p>
-<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-obstacles="3,4">
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-obstacles="3,4" data-test="warns">
 <script type="text/plain">
 var program = () => sense('obstacle') ? nbr(100).max() : nbr(1).max();
 </script>
@@ -48,7 +48,7 @@ var program = () => branch(sense('obstacle'), () => nbr(100).max(), () => nbr(1)
 var program = () => branch(sense('obstacle'), () => null, () => distanceTo(sense('source')));
 </script>
 </div>
-<p>To pick a function at run time, as in <code>var f = c ? hopsTo : distanceTo; f(src)</code>, wrap your own functions with <code>aggregate('name', fn)</code>: different functions then never share messages, at no cost in message size. The library functions already are.</p>
+<p>To pick a function at run time, as in <code>var f = c ? hopsTo : distanceTo; f(src)</code>, wrap your own functions with <code>aggregate('name', fn)</code>: different functions then never share messages, at no cost in message size. The library functions already are, and the playground warns when one of yours is missing it.</p>
 
 <h2>Try it</h2>
 <p class="task">1. Two separate worlds: nodes with x &lt; 3 compute the gradient, the others count their neighbours.</p>

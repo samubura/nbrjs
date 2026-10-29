@@ -31,10 +31,14 @@
   exports.check = function (src, acorn) {
     var ast = acorn.parse(src, { ecmaVersion: 2020, locations: true, allowReturnOutsideFunction: true });
     // Aggregate functions: the operators, the library, and the program's own functions that call them.
-    var agg = {}, defs = [];
-    AGG.forEach(function (k) { agg[k] = true; });
+    // Wrapped ones (aggregate('g', ...), and the library) align by name; the others by position.
+    var agg = {}, wrapped = {}, defs = [], picks = [];
+    AGG.forEach(function (k) { agg[k] = wrapped[k] = true; });
     walk(ast, function (n) {
-      if (n.type === 'VariableDeclarator' && n.id.type === 'Identifier' && n.init && /Function/.test(n.init.type)) defs.push([n.id.name, n.init]);
+      var init = n.type === 'VariableDeclarator' && n.id.type === 'Identifier' && n.init;
+      if (init && /Function/.test(init.type)) defs.push([n.id.name, init]);
+      if (init && callee(init) === 'aggregate') agg[n.id.name] = wrapped[n.id.name] = true;
+      if (init && /^(Conditional|Logical)Expression$/.test(init.type)) picks.push([n.id.name, init]);
       if (n.type === 'FunctionDeclaration') defs.push([n.id.name, n]);
     });
     var calls = function (n) { return find(n, function (x) { return agg[callee(x)]; }); };
@@ -42,6 +46,15 @@
       grew = false;
       defs.forEach(function (d) { if (!agg[d[0]] && calls(d[1].body)) grew = agg[d[0]] = true; });
     }
+
+    // var f = c ? g : h, with g or h an unwrapped aggregate function: calling f mixes them.
+    var picked = {};
+    picks.forEach(function (p) {
+      var names = [p[1].consequent, p[1].alternate, p[1].left, p[1].right].filter(function (a) {
+        return a && a.type === 'Identifier' && agg[a.name] && !wrapped[a.name];
+      }).map(function (a) { return a.name; });
+      if (names.length) picked[p[0]] = names;
+    });
 
     var warnings = [];
     var warn = function (n, what, fix) {
@@ -53,6 +66,10 @@
       if (n.type === 'ConditionalExpression') warn({ a: n.consequent, b: n.alternate, type: '' }, 'inside ?: is not aligned', BRANCH);
       if (n.type === 'LogicalExpression') warn(n.right, 'after ' + n.operator + ' is not aligned', BRANCH);
       if (n.type === 'IfStatement') warn({ a: n.consequent, b: n.alternate, type: '' }, 'inside if is not aligned', BRANCH);
+      if (n.type === 'CallExpression' && n.callee.type === 'Identifier' && picked[n.callee.name]) {
+        warnings.push('line ' + n.loc.start.line + ': ' + n.callee.name + '() runs ' + picked[n.callee.name].join(' or ') +
+          ' depending on a condition, and they align by position; define them with aggregate(\'name\', ...)');
+      }
       if (LOOPS.test(n.type)) warn(n.body, 'in a loop aligns by iteration', 'wrap the body in align(key, () => ...)');
       if (CALLBACKS.test(callee(n)) && n.callee.type === 'MemberExpression') {
         n.arguments.forEach(function (a) {

@@ -179,12 +179,14 @@
     var cfg, pos, sensors, net, program, out = {}, rounds = 0, T = null, remote = null;
     var playing = o.autoplay !== false, visible = true, hover = null, drag = null;
 
+    var overBle = function () { return !!cfg && cfg.target === 'ble' && !!window.nbrjsBle; };
     var setStatus = function (msg, err) {
       status.textContent = msg || '';
       status.className = 'pg-status' + (err ? ' err' : '');
     };
     var restart = function () {
-      net = S.network(pos, +range.value);
+      // target 'ble': messages in the BLE format, so float32, hashed paths and the 23-byte limit show here.
+      net = S.network(pos, +range.value, overBle() ? nbrjsBle.sim : null);
       if (remote) net.devices[remote.id] = remote;
       out = {};
       rounds = 0;
@@ -230,7 +232,8 @@
     var loadConfig = function () {
       try {
         cfg = typeof o.config === 'object' && !tabs ? o.config : evalConfig(confEl.value);
-        setStatus(cfg.target && cfg.target !== 'sim' ? "config.js: target '" + cfg.target + "' runs on devices; simulating it here" : '');
+        setStatus(overBle() ? "config.js: target 'ble', simulated with Bluetooth messages (binary, 23 bytes at most)" :
+          cfg.target && cfg.target !== 'sim' ? "config.js: target '" + cfg.target + "' runs on devices; simulating it here" : '');
         reset();
       } catch (e) {
         setStatus('config.js: ' + e.message, true);
@@ -319,8 +322,9 @@
       if (hover === null) { info.textContent = 'Click: source · Shift+click: obstacle · Drag: move · Hover: inspect'; return; }
       var m = net.messages[hover] || '', n = 0;
       for (var id in pos) if (id !== hover && Math.hypot(pos[id][0] - pos[hover][0], pos[id][1] - pos[hover][1]) <= net.range) n++;
-      info.textContent = 'node ' + hover + ' · value ' + JSON.stringify(out[hover]) + ' · ' + n + ' neighbours · sends ' + m +
-        (m && window.nbrjsBle ? ' · over BLE ' + bleSize(m) + ' B' : '');
+      var sends = !overBle() ? m + (m && window.nbrjsBle ? ' · over BLE ' + bleSize(m) + ' B' : '') :
+        hover in net.messages ? (m ? A.encode(nbrjsBle.sim.decode(m)) + ' · ' + (m.length + 1) + ' B' : 'nothing: over 23 bytes') : '';
+      info.textContent = 'node ' + hover + ' · value ' + JSON.stringify(out[hover]) + ' · ' + n + ' neighbours · sends ' + sends;
     };
 
     var pick = function (e) {

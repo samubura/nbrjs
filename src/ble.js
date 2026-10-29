@@ -12,11 +12,17 @@
   var shortId = function (addr) { return addr.substr(12, 5).replace(':', ''); };
 
   // Binary messages, since adverts are tiny. Per entry: 2-byte path hash, a tag, the value.
-  // Tag: 0-63 a small integer itself | 64 + index in SPECIAL | +128: per-neighbour overrides
-  // follow (count, then 2-byte id + tagged value each). A hop gradient takes 3 bytes.
-  var SPECIAL = [null, false, true, Infinity, -Infinity, NaN, 'mark', 'int', 'f32', 'json'];
+  // Tag: 0-63 a small integer itself | 64 + index in SPECIAL | 80 + n: an array of n < 16 tagged values
+  // (objects travel as arrays, see xc) | +128: per-neighbour overrides follow (count, then 2-byte
+  // id + tagged value each). A hop gradient takes 3 bytes, {dist: 2.83, value: 'a'} 9.
+  var SPECIAL = [null, false, true, Infinity, -Infinity, NaN, 'mark', 'int', 'f32', 'json', 'str'];
   var chr = String.fromCharCode;
   var two = function (n) { return chr(n >> 8 & 255, n & 255); };
+  // ASCII only, as engines differ on other characters. Not a regex: Espruino 2v29 gets ranges in classes wrong.
+  var ascii = function (s) {
+    for (var i = 0; i < s.length; i++) if (s.charCodeAt(i) > 127) return false;
+    return true;
+  };
   var val = function (v, flag) {
     if (v === undefined) v = null;
     if (typeof v === 'number' && v === (v | 0)) {
@@ -25,8 +31,10 @@
       while (z > 127) { s += chr(z & 127 | 128); z = z >>> 7; }
       return s + chr(z);
     }
-    var i = v !== v ? 5 : SPECIAL.indexOf(v);
+    var i = v !== v ? 5 : typeof v === 'string' ? -1 : SPECIAL.indexOf(v);
     if (i >= 0) return chr(64 + i | flag);
+    if (Array.isArray(v) && v.length < 16) return chr(80 + v.length | flag) + v.map(function (x) { return val(x, 0); }).join('');
+    if (typeof v === 'string' && v.length < 256 && ascii(v)) return chr(74 | flag, v.length) + v;
     if (typeof v === 'number') {
       var f = new Float32Array([v]), b = new Uint8Array(f.buffer); // ponytail: float32, ~7 digits
       return chr(72 | flag, b[0], b[1], b[2], b[3]);
@@ -60,6 +68,8 @@
       }
       if (t === 72) return new Float32Array(new Uint8Array([byte(), byte(), byte(), byte()]).buffer)[0];
       if (t === 73) { var n = byte(); i += n; return A.decode(s.substr(i - n, n)); }
+      if (t === 74) { n = byte(); i += n; return s.substr(i - n, n); }
+      if (t >= 80 && t < 96) { var a = []; for (var c = t - 80; c > 0; c--) a.push(get(byte())); return a; }
       return SPECIAL[t - 64];
     };
     while (i < s.length) {
@@ -77,6 +87,30 @@
       msg[k] = e;
     }
     return msg;
+  };
+
+  // The BLE wire format for the simulator, sim.network(pos, range, nbrjsBle.sim): hashed paths,
+  // float32 numbers and the 23-byte limit show up before flashing a board.
+  // ponytail: sim ids must be numbers below 65536, sent as the 16-bit ids BLE uses.
+  var ids = function (msg, to) {
+    var out = {};
+    for (var k in msg) {
+      var m = msg[k], ov = m[1];
+      out[k] = m;
+      if (!ov) continue;
+      var o = {};
+      for (var j in ov) o[to(j)] = ov[j];
+      out[k] = [m[0], o];
+    }
+    return out;
+  };
+  exports.sim = {
+    hashed: true,
+    encode: function (msg) {
+      var data = exports.pack(ids(msg, function (j) { return (+j).toString(16); }));
+      return data.length > MAX ? '' : data; // as on a board: too big, nothing sent
+    },
+    decode: function (s) { return ids(exports.unpack(s), function (j) { return String(parseInt(j, 16)); }); }
   };
 
   // Usually reached through require('nbrjs').start(program, {target: 'ble', ...}).
