@@ -46,7 +46,7 @@ var program = () => hopsTo(sense('source'));
 
 <h2>Uploading</h2>
 <p>From the <a href="playground.html">playground</a>, in Chrome or Edge: <b>To device ↗</b>, pick the network, then <b>Upload via Bluetooth</b> or <b>via USB</b>. The first time, the library is installed in the board's flash memory, where it runs without using much RAM; after that only the program travels. With <b>Save</b> the program starts by itself at every power-up.</p>
-<p>Prefer the <a href="https://www.espruino.com/ide/">Espruino Web IDE</a>? In <i>Settings → Communications → Module URL</i> add the modules address shown in the same dialog: <code>require('nbrjs')</code> then works like an official module. Copy the program from the dialog, which already has its <code>if</code>s aligned.</p>
+<p>Prefer the <a href="https://www.espruino.com/ide/">Espruino Web IDE</a>? In <i>Settings → Communications → Module URL</i> add the modules address shown in the same dialog: <code>require('nbrjs')</code> then works like an official module.</p>
 <p>For ESP32, from installing Espruino to choosing between Bluetooth and WiFi, see the <a href="esp32.html">ESP32 guide</a>. With a single Puck.js, the <a href="puck.html">Puck.js demo</a> makes it part of a simulated network.</p>
 
 <h2>Espruino's JavaScript</h2>
@@ -65,6 +65,6 @@ var program = () => hopsTo(sense('source'));
 <script src="../src/ble.js"></script>
 <script src="../src/lib.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
-<script src="../src/align.js"></script>
+<script src="../src/check.js"></script>
 <script src="playground.js"></script>
 <script src="site.js"></script>

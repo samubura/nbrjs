@@ -50,10 +50,9 @@ a [playground](https://samubura.github.io/nbrjs/web/playground.html) that also u
 Fields: `.self`, `.map((v, id) => ...)`, `.zip(other, (a, b) => ...)`, `.reduce((acc, v) => ..., init)`, `.min()`, `.max()`, `.sum()`.
 Reductions skip the device itself, so `Math.min` and `Math.max` work as reducers.
 
-**Plain control flow.** The playground, its device upload and `scripts/bundle.js` rewrite `if`, `?:`, `&&` and `||`
-around aggregate code into branches, and wrap named functions in `aggregate`
-([`src/align.js`](src/align.js), needs `acorn`). Code typed straight into the Espruino console is not rewritten:
-use `branch` there.
+**Control flow.** Aggregate code under `if`, `?:`, `&&` or `||` needs `branch`: a plain `if` does not align.
+The playground and `scripts/bundle.js` warn where one is missing ([`src/check.js`](src/check.js), needs `acorn`),
+but never rewrite your code, so it behaves the same from the Espruino IDE.
 
 **Standard library** (`require('nbrjs/lib').globals()`, opt-in): `hopsTo(source)`, `distanceTo(source, metric)`,
 `broadcast(source, value)`, `collectSum(distance, value)`, `isLeader(radius)`, `networkMax(v)`, `networkMin(v)`,
