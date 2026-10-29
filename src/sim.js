@@ -14,7 +14,7 @@
   };
 
   // opts: {codec: {encode, decode, hashed, id(key)} for another wire format (JSON by default;
-  //        nbrjsBle.sim for BLE), loss: chance a message is not heard, skip: chance a device
+  //        bleCodec() for BLE), loss: chance a message is not heard, skip: chance a device
   //        misses a round, ttl: rounds a neighbour is kept without being heard (1, or 3 with loss/skip)}.
   // A device keeps the last message heard from each neighbour until ttl expires, as on a radio.
   exports.network = function (pos, range, opts) {
@@ -72,8 +72,33 @@
         return out;
       }
     };
-    ids.forEach(function (id) { net.devices[id] = A.device(wire.id ? wire.id(id) : id, wire.hashed); });
+    // With hashed keys, net.collisions lists the paths that share one: their operators would mix.
+    var paths = {}, key = function (p) {
+      var h = A.hash(p);
+      if (h in paths && paths[h] !== p && paths[h] !== null) { net.collisions.push([paths[h], p]); paths[h] = null; }
+      else if (!(h in paths)) paths[h] = p;
+      return h;
+    };
+    net.collisions = [];
+    ids.forEach(function (id) { net.devices[id] = A.device(wire.id ? wire.id(id) : id, wire.hashed && key); });
     return net;
+  };
+
+  // The BLE wire format, for network(pos, range, {codec: bleCodec()}): hashed paths, float32 numbers,
+  // ids as wide as real ones (node 3 is 40963), and messages over 23 bytes in up to `chunks` adverts
+  // (4, as many as a 400 ms listening window hears) that the simulator hears or loses one by one.
+  // Here rather than in nbrjs/ble, which goes on the boards.
+  exports.bleCodec = function (chunks) {
+    var B = typeof nbrjsBle !== 'undefined' ? nbrjsBle : require('nbrjs/ble');
+    return {
+      hashed: true,
+      id: function (key) { return 40960 + +key; },
+      encode: function (msg) {
+        var data = B.pack(msg);
+        return data.length > 23 ? B.split(msg, chunks || 4) : data;
+      },
+      decode: B.unpack
+    };
   };
 
   // The 'sim' target: start(program, {target: 'sim', nodes, layout, range, period,

@@ -3,7 +3,7 @@
 // callbacks it aligns by position. This finds those spots and warns; it never rewrites. Needs acorn.
 (function (exports) {
   var AGG = ['xc', 'nbr', 'rep', 'share', 'branch', 'align', 'aggregate', 'hopsTo', 'distanceTo', 'broadcast',
-    'collectSum', 'networkMax', 'networkMin', 'isLeader', 'neighbourCount', 'rounds', 'countdown'];
+    'collect', 'collectSum', 'networkMax', 'networkMin', 'isLeader', 'neighbourCount', 'rounds', 'countdown'];
   var CALLBACKS = /^(map|forEach|filter|some|every|find|findIndex|sort|reduce)$/;
   var LOOPS = /^(For|ForIn|ForOf|While|DoWhile)Statement$/;
 

@@ -3,7 +3,7 @@
 // test: in a preset) marks the examples that keep changing or are wrong on purpose.
 var fs = require('fs'), path = require('path'), vm = require('vm');
 var root = path.join(__dirname, '..'), web = path.join(root, 'web');
-var A = require('nbrjs'), S = require('nbrjs/sim'), L = require('nbrjs/lib'), B = require('nbrjs/ble');
+var A = require('nbrjs'), S = require('nbrjs/sim'), L = require('nbrjs/lib');
 var C = require('../src/check.js'), acorn = require('acorn');
 var OPS = ['xc', 'retsend', 'nbr', 'rep', 'share', 'branch', 'align', 'aggregate', 'id', 'sense', 'nbrSense'];
 var LIBK = Object.keys(L).filter(function (k) { return k !== 'globals'; });
@@ -27,6 +27,7 @@ var settles = function (p, attrs, codec) {
   for (k = 0; k < 60; k++) out = net.step(p, sens);
   var a = JSON.stringify(out);
   for (k = 0; k < 20; k++) out = net.step(p, sens);
+  if (net.collisions.length) throw new Error('BLE names collide: ' + JSON.stringify(net.collisions));
   return JSON.stringify(out) === a;
 };
 var run = function (label, code, attrs) {
@@ -37,7 +38,7 @@ var run = function (label, code, attrs) {
     if (!w.length && attrs.test === 'warns') return fail(label, 'expected an alignment warning');
     if (attrs.test === 'changes') return;
     if (!settles(p, attrs)) return fail(label, 'does not settle');
-    if (!settles(p, attrs, B.sim)) return fail(label, 'does not settle over BLE');
+    if (!settles(p, attrs, S.bleCodec())) return fail(label, 'does not settle over BLE');
   } catch (e) { fail(label, e.message); }
 };
 

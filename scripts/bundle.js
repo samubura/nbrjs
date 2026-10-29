@@ -1,8 +1,11 @@
+#!/usr/bin/env node
 // Inlines the nbrjs modules an app requires, as the Espruino Web IDE does with Modules.addCached.
 // Usage: node scripts/bundle.js app.js > app.bundle.js   (then upload with the Web IDE or `espruino` CLI)
 //        node scripts/bundle.js --modules out/          (just the minified modules, one file each)
+//        npx nbrjs bundle app.js > app.bundle.js        (once the package is installed)
 // Modules are minified with terser when it is installed: Espruino keeps function source in RAM.
 var fs = require('fs'), path = require('path');
+if (process.argv[2] === 'bundle') process.argv.splice(2, 1);
 var root = path.join(__dirname, '..');
 var mods = { 'nbrjs': 'src/core.js', 'nbrjs/sim': 'src/sim.js', 'nbrjs/ble': 'src/ble.js',
   'nbrjs/host': 'src/host.js', 'nbrjs/udp': 'src/udp.js', 'nbrjs/lib': 'src/lib.js' };

@@ -196,9 +196,9 @@
   var plain = function (p) { return p; };
 
   // inbox: {neighbourId: message}; returns {value, message} to broadcast.
-  // hashed: message keys are hash(path) instead of readable paths.
+  // hashed: message keys are hash(path) instead of readable paths (or a function of the path).
   exports.device = function (id, hashed) {
-    var state = {}, k = hashed ? exports.hash : plain;
+    var state = {}, k = typeof hashed === 'function' ? hashed : hashed ? exports.hash : plain;
     return {
       id: id,
       round: function (program, inbox, sensors, nbrSensors) {

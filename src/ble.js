@@ -106,21 +106,6 @@
     return out.slice(0, max);
   };
 
-  // The BLE wire format for the simulator, sim.network(pos, range, {codec: nbrjsBle.sim}): hashed paths,
-  // float32 numbers, ids as wide as real ones (node 3 is 40963) and the 23-byte limit show up
-  // before flashing a board.
-  exports.sim = {
-    hashed: true,
-    id: function (key) { return 40960 + +key; },
-    chunks: 4, // as many as a 400 ms listening window hears, at one advert every 100 ms
-    // A string, or the chunks of a message over MAX bytes (the simulator hears or loses each one).
-    encode: function (msg) {
-      var data = exports.pack(msg);
-      return data.length > MAX ? exports.split(msg, exports.sim.chunks) : data;
-    },
-    decode: exports.unpack
-  };
-
   // Usually reached through require('nbrjs').start(program, {target: 'ble', ...}).
   // opts: {period ms (1000), ttl s (3 periods), scan: ms of listening per period (400; >= period
   //        listens all the time), minRssi: ignore weaker neighbours (dBm), txPower: RSSI at 1 m (-60),

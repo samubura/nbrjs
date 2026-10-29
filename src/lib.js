@@ -11,15 +11,18 @@
       .reduce(function (best, c) { return c.value < best.value ? c : best; }, { value: below === undefined ? Infinity : below, id: null }).id;
   };
 
-  // Hops to the nearest source; Infinity where no source is reachable.
-  exports.hopsTo = A.aggregate('hopsTo', function (source) {
-    return share(Infinity, function (d) { return source ? 0 : d.min() + 1; });
+  // When the source goes away, or a link drops, a gradient climbs one step per round for as long
+  // as the network has loops. With max, a value over it becomes Infinity, so the climb stops.
+  var bound = function (v, max) { return v > max ? Infinity : v; };
+  // Hops to the nearest source; Infinity where no source is reachable (or farther than max).
+  exports.hopsTo = A.aggregate('hopsTo', function (source, max) {
+    return share(Infinity, function (d) { return source ? 0 : bound(d.min() + 1, max); });
   });
   // Distance to the nearest source along the network. metric: the length of each link,
   // a field (default nbrSense('range'), estimated from the signal on BLE) or a number.
-  exports.distanceTo = A.aggregate('distanceTo', function (source, metric) {
+  exports.distanceTo = A.aggregate('distanceTo', function (source, metric, max) {
     var m = metricOr(metric);
-    return share(Infinity, function (d) { return source ? 0 : d.zip(m, add).min(); });
+    return share(Infinity, function (d) { return source ? 0 : bound(d.zip(m, add).min(), max); });
   });
   // The value of the nearest source, everywhere; undefined where no source is reachable.
   exports.broadcast = A.aggregate('broadcast', function (source, value, metric) {
@@ -31,15 +34,18 @@
         .reduce(function (best, p) { return p.dist < best.dist ? p : best; }, none);
     }).value;
   });
-  // Sums value toward the source along `distance` (e.g. hopsTo(source)): each device sends its
-  // partial sum to the neighbour closest to the source only. The source gets the total.
-  exports.collectSum = A.aggregate('collectSum', function (distance, value) {
+  // Accumulates value toward the source along `distance` (e.g. hopsTo(source)): each device sends
+  // its partial result to the neighbour closest to the source only, and `none` to the others.
+  // The source gets the result for the whole network: collect(d, v, Math.max, -Infinity) is the
+  // largest value, collectSum(d, v) the sum. `none` must leave a value unchanged: 0 for a sum.
+  exports.collect = A.aggregate('collect', function (distance, value, accumulate, none) {
     var parent = minId(nbr(distance), distance);
-    return xc(0, function (n) {
-      var total = n.sum(value);
-      return A.retsend(total, n.map(function (x, id) { return id === parent ? total : 0; }));
+    return xc(none, function (n) {
+      var total = n.reduce(accumulate, value);
+      return A.retsend(total, n.map(function (x, id) { return id === parent ? total : none; }));
     });
   });
+  exports.collectSum = function (distance, value) { return exports.collect(distance, value, add, 0); };
   // The largest / smallest value in the whole network (it never goes back: a past maximum stays).
   exports.networkMax = A.aggregate('networkMax', function (v) {
     return share(v, function (n) { return Math.max(v, n.max()); });

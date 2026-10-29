@@ -28,7 +28,7 @@ a [playground](https://samubura.github.io/nbrjs/web/playground.html) that also u
 
 ## Footprint
 
-- **Code:** ~3 KB minified. When installed in a board's `Storage`, as the playground does, it runs from flash: the core takes about 320 variables, against 475 for the same code uploaded as text (Espruino Linux build).
+- **Code:** the core is ~4 KB minified. When installed in a board's `Storage`, as the playground does, it runs from flash: about 380 variables, against 510 for the same code uploaded as text. The library adds about 270 (350 as text), the BLE transport 130 (260). Measured on the Espruino Linux build.
 - **BLE messages:** binary, with 2-byte path hashes. A hop gradient is 3 bytes, a gradient inside a `branch` 6 bytes, and a 23-byte advert fits 5–7 operators. Bigger messages go in up to 4 adverts sent in turn (`chunks`), each with whole operators.
 - **Objects:** `share({dist: Infinity, value: v}, ...)` sends `[dist, value]`, without field names. Every device runs the same program, so the receiver rebuilds the object from the operator's initial value, which also fixes its shape.
 - **Tests:** the suite runs on the Espruino interpreter in CI, on the minified bundle that ships to devices.
@@ -55,9 +55,10 @@ Reductions skip the device itself, so `Math.min` and `Math.max` work as reducers
 The playground and `scripts/bundle.js` warn where one is missing ([`src/check.js`](src/check.js), needs `acorn`),
 but never rewrite your code, so it behaves the same from the Espruino IDE.
 
-**Standard library** (`require('nbrjs/lib').globals()`, opt-in): `hopsTo(source)`, `distanceTo(source, metric)`,
-`broadcast(source, value)`, `collectSum(distance, value)`, `isLeader(radius)`, `networkMax(v)`, `networkMin(v)`,
-`neighbourCount()`, `rounds()`, `countdown(n)`, `minId(field)`.
+**Standard library** (`require('nbrjs/lib').globals()`, opt-in): `hopsTo(source, max)`, `distanceTo(source, metric, max)`,
+`broadcast(source, value)`, `collect(distance, value, accumulate, none)`, `collectSum(distance, value)`, `isLeader(radius)`,
+`networkMax(v)`, `networkMin(v)`, `neighbourCount()`, `rounds()`, `countdown(n)`, `minId(field)`. With `max`, a gradient
+stops climbing when its source goes away. All of it, with the options of each target: [Reference](https://samubura.github.io/nbrjs/web/reference.html).
 
 ## Targets
 
@@ -66,16 +67,16 @@ All targets take `period` (ms), `sensors(id)` (values for `sense()`) and `onResu
 
 | target | where | options |
 |---|---|---|
-| `ble` | Puck.js, ESP32 | `ttl` (s), `scan` (ms of listening per period, 400), `minRssi`, `txPower`, `chunks` (adverts a big message may take, 4). No infrastructure; `id()` is a number (the last 2 bytes of the address), `nbrSense('rssi')`, and `nbrSense('range')` estimated in metres. In the playground, `target: 'ble'` simulates with the same binary messages (`sim.network(pos, range, {codec: require('nbrjs/ble').sim})`) |
+| `ble` | Puck.js, ESP32 | `ttl` (s), `scan` (ms of listening per period, 400), `minRssi`, `txPower`, `chunks` (adverts a big message may take, 4). No infrastructure; `id()` is a number (the last 2 bytes of the address), `nbrSense('rssi')`, and `nbrSense('range')` estimated in metres. In the playground, `target: 'ble'` simulates with the same binary messages (`sim.network(pos, range, {codec: sim.bleCodec()})`) |
 | `udp` | ESP32, Node | `wifi: {ssid, password}`, `position: () => [x, y]`, `range`, `port`, `address`. Broadcast over WiFi; with positions, neighbours are those within `range` |
 | `sim` | browser, Node | `nodes`, `layout` (`random`, `grid`, `line`), `range`; `nbrSense('range')` is the distance. As on a radio: `loss` (share of messages lost), `skip` (share of rounds missed), `ttl` (rounds a silent neighbour is kept) |
 | `host` | a board tethered to a PC | the PC runs the rounds and simulates the neighbours ([demo](https://samubura.github.io/nbrjs/web/puck.html)) |
 
 ## On a board
 
-- **From the playground** (Chrome or Edge): *Sul dispositivo ↗* installs the library in the board's `Storage` over Bluetooth or USB, then uploads the program, optionally saved to start at boot.
+- **From the playground** (Chrome or Edge): *To device ↗* installs the library in the board's `Storage` over Bluetooth or USB, then uploads the program, optionally saved to start at boot.
 - **From the Espruino Web IDE**: add `https://samubura.github.io/nbrjs/modules` to *Settings → Communications → Module URL*, and `require('nbrjs')` works like any Espruino module.
-- **From the command line**: `node scripts/bundle.js app.js > app.bundle.js` inlines the minified modules, ready for the `espruino` CLI.
+- **From the command line**: `npx nbrjs bundle app.js > app.bundle.js` (or `node scripts/bundle.js` in a clone) inlines the modules, ready for the `espruino` CLI or the IDE. With `terser` and `acorn` installed next to it, the modules are minified and the program is checked for missing `branch`es.
 
 Editors get types from `types/` (TypeScript declarations); for the globals, `/// <reference types="nbrjs/types/globals" />`.
 

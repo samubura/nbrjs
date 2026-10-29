@@ -20,6 +20,16 @@ jobs:
       - run: npm ci
       - run: npm test
 
+  # The TypeScript declarations (types/) against a sample program.
+  types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npx --yes -p typescript@5.6.3 npm run test:types
+
   # The real compatibility check: same tests on the Espruino interpreter (Linux build, cached).
   espruino:
     runs-on: ubuntu-latest

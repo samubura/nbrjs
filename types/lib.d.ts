@@ -1,13 +1,15 @@
 import { Field } from './index';
 
 type Metric = Field<number> | number;
-/** Hops to the nearest source; Infinity where none is reachable. */
-export function hopsTo(source: unknown): number;
-/** Distance to the nearest source along the network (metric: nbrSense('range') by default). */
-export function distanceTo(source: unknown, metric?: Metric): number;
+/** Hops to the nearest source; Infinity where none is reachable or farther than max (which stops the climb when a source goes away). */
+export function hopsTo(source: unknown, max?: number): number;
+/** Distance to the nearest source along the network (metric: nbrSense('range') by default); Infinity beyond max. */
+export function distanceTo(source: unknown, metric?: Metric, max?: number): number;
 /** The value of the nearest source, everywhere; undefined where none is reachable. */
 export function broadcast<T>(source: unknown, value: T, metric?: Metric): T;
-/** Sums value toward the source along distance (e.g. hopsTo(source)): the source gets the total. */
+/** Accumulates value toward the source along distance (e.g. hopsTo(source)); none must leave a value unchanged. */
+export function collect<T>(distance: number, value: T, accumulate: (a: T, b: T) => T, none: T): T;
+/** Sums value toward the source along distance: the source gets the total. */
 export function collectSum(distance: number, value: number): number;
 export function networkMax(v: number): number;
 export function networkMin(v: number): number;

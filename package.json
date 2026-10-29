@@ -11,6 +11,9 @@
   },
   "bugs": "https://github.com/samubura/nbrjs/issues",
   "types": "types/index.d.ts",
+  "bin": {
+    "nbrjs": "scripts/bundle.js"
+  },
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
@@ -39,7 +42,8 @@
     "test": "node test/test.js && node test/check.js && node test/site.js",
     "test:espruino": "sh scripts/espruino-test.sh",
     "bundle": "node scripts/bundle.js",
-    "site": "sh scripts/site.sh"
+    "site": "sh scripts/site.sh",
+    "test:types": "tsc --noEmit --strict --module nodenext --moduleResolution nodenext test/types.ts"
   },
   "keywords": [
     "aggregate-computing",

@@ -146,12 +146,12 @@ check('sim with loss and skipped rounds: hopsTo still converges', run(lossy, fun
   { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 });
 
 // The simulator with the BLE format: per-neighbour overrides, float32, the 23-byte limit.
-var bleLine = function (n) { var l = line(n); return sim.network(l.pos, 1.5, { codec: ble.sim }); };
+var bleLine = function (n) { var l = line(n); return sim.network(l.pos, 1.5, { codec: sim.bleCodec() }); };
 check('sim over BLE: collectSum counts the line', run(bleLine(5), function () {
   var s = sense('source');
   return L.collectSum(L.hopsTo(s), 1);
 }, 20, src0)[0], 5);
-var bleLeaders = sim.network(sim.layout('random', 40, 42), 1.5, { codec: ble.sim });
+var bleLeaders = sim.network(sim.layout('random', 40, 42), 1.5, { codec: sim.bleCodec() });
 var bleSettled = JSON.stringify(run(bleLeaders, lp, 60));
 check('sim over BLE: isLeader settles', JSON.stringify(run(bleLeaders, lp, 20)), bleSettled);
 check('sim over BLE: leader messages fit an advert', Object.keys(bleLeaders.messages).filter(function (i) {
@@ -179,6 +179,20 @@ check('ble message sizes', [ble.pack(hop).length, ble.pack(rich).length], [3, 40
 check('groups: a first byte per group, printable, N without one', [A.magic(), A.magic('swarm') === A.magic('swarm'),
   A.magic('swarm') !== A.magic('robots'), A.magic('swarm').charCodeAt(0) > 32 && A.magic('swarm').charCodeAt(0) < 127], ['N', true, true, true]);
 
+check('lib: collect with max and sum', run(line(5), function () {
+  var d = L.hopsTo(sense('source'));
+  return [L.collect(d, +id() * 10, Math.max, -Infinity), L.collectSum(d, 1)];
+}, 20, src0)[0], [40, 5]);
+
+// A source that goes away: hops climb for ever, unless bounded by max.
+var gone = function (max) {
+  var net = line(6), p = function () { return L.hopsTo(sense('source'), max); };
+  run(net, p, 15, src0);
+  var a = run(net, p, 25, {}), b = run(net, p, 25, {});
+  return [a[5] === b[5], b[5] === Infinity];
+};
+check('lib: hopsTo with max stops climbing when the source goes away', [gone(), gone(8)], [[false, false], [true, true]]);
+
 var nan = A.decode(A.encode({ x0: [NaN, { 1: [1, NaN] }] }));
 check('NaN survives JSON', [isNaN(nan.x0[0]), nan.x0[1][1][0], isNaN(nan.x0[1][1][1])], [true, 1, true]);
 
@@ -205,6 +219,10 @@ link.stop();
 check('ble hears neighbours and advertises compactly', [link.id, r.value[0], r.value[1], ble.unpack(adv.manufacturerData.slice(1))[A.hash('x0')], adv.manufacturerData.length],
   [1, '2', 0.32, [1], 1 + 2 + 1]);
 
+var clash = sim.network(line(3).pos, 1.5, { codec: sim.bleCodec() }); // 'a0:k/x0' and 'a1:4634/x0' have the same 2-byte hash
+run(clash, function () { return [align('k', function () { return nbr(1).sum(); }), align(4634, function () { return nbr(2).sum(); })]; }, 2);
+check('sim over BLE: paths sharing a hash are reported', clash.collisions, [['a0:k', 'a1:4634'], ['a0:k/x0', 'a1:4634/x0']]);
+
 // Messages over 23 bytes: chunks of whole entries, advertised in turn, merged by the receiver.
 var four = function () { return [nbr(1.5).sum(), nbr(2.5).sum(), nbr(3.5).sum(), nbr(4.5).sum()]; };
 var m4 = {};
@@ -227,7 +245,7 @@ var r3 = big.round().value;
 big.stop();
 check('ble chunks: merged per round, missing ones kept from the round before',
   [r1, r2, r3, adv.length, adv[0].charCodeAt(0)], [[10.5, 20.5, 30.5, 0], [10.5, 20.5, 30.5, 40.5], [11.5, 20.5, 30.5, 40.5], 2, 78 | 128]);
-var chunkNet = sim.network(line(5).pos, 1.5, { codec: ble.sim });
+var chunkNet = sim.network(line(5).pos, 1.5, { codec: sim.bleCodec() });
 var bigProgram = function () { return [L.hopsTo(sense('source')), nbr(1.5).sum(), nbr(2.5).sum(), nbr(3.5).sum()]; };
 check('sim over BLE: a message over 23 bytes goes in chunks', [run(chunkNet, bigProgram, 10, src0), chunkNet.messages[2].length],
   [run(line(5), bigProgram, 10, src0), 2]);
