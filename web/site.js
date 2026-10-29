@@ -85,7 +85,7 @@
         target: 'sim', layout: d.layout, nodes: d.nodes && +d.nodes, range: d.range && +d.range,
         sources: d.sources === '' ? [] : ints(d.sources), obstacles: ints(d.obstacles)
       },
-      height: d.height && +d.height, autoplay: d.autoplay !== 'false', align: d.align !== 'off'
+      height: d.height && +d.height, autoplay: d.autoplay !== 'false'
     });
   });
 })();

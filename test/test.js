@@ -95,11 +95,6 @@ var fb = A.aggregate('fb', function () { return nbr('B').reduce(cat, ''); });
 check('aggregate: different functions never align', run(line(3), function () {
   return (id() === '1' ? fb : fa)();
 }, 2), { 0: '', 1: '', 2: '' });
-// What the alignment transform emits for: if (id() === '1') nbr('A'); return nbr('B').reduce(cat, '');
-check('enterIf/exit: an operator inside an if does not shift the ones after it', run(line(3), function () {
-  if (A.enterIf(id() === '1')) { try { nbr('A'); } finally { A.exit(); } } else { try { } finally { A.exit(); } }
-  return nbr('B').reduce(cat, '');
-}, 2), { 0: 'B', 1: 'BB', 2: 'B' });
 
 // Standard library.
 var L = require('nbrjs/lib');

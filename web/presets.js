@@ -35,8 +35,8 @@ var program = () => broadcast(sense('source'), id())[1];`,
 };` },
 
   { name: 'Obstacles (branch)', program:
-`// Shift+click makes a node an obstacle: the conditional takes it out of the gradient's domain.
-var program = () => sense('obstacle') ? null : distanceTo(sense('source'));`,
+`// Shift+click makes a node an obstacle: the branch takes it out of the gradient's domain.
+var program = () => branch(sense('obstacle'), () => null, () => distanceTo(sense('source')));`,
     config:
 `return {
   target: 'sim',

@@ -14,7 +14,7 @@
 <code>sense(name)</code> (in the simulator <code>source</code>, <code>obstacle</code>, <code>x</code>, <code>y</code> and those from config.js), <code>nbrSense('range')</code>.</p>
 <p>Fields: <code>.self</code>, <code>.map((v, id) =&gt; ...)</code>, <code>.zip(other, (a, b) =&gt; ...)</code>, <code>.reduce(f, initial)</code>, <code>.min()</code>, <code>.max()</code>, <code>.sum()</code>, <code>.at(id)</code>. Reductions skip the device itself.</p>
 <p>Library: <code>hopsTo</code>, <code>distanceTo</code>, <code>broadcast</code>, <code>collectSum</code>, <code>isLeader</code>, <code>networkMax</code>, <code>networkMin</code>, <code>neighbourCount</code>, <code>rounds</code>, <code>countdown</code>, <code>minId</code>.</p>
-<p><code>if</code>, <code>?:</code>, <code>&amp;&amp;</code> and <code>||</code> around aggregate code are aligned automatically, like <code>branch</code>.</p>
+<p>Aggregate code under <code>if</code>, <code>?:</code>, <code>&amp;&amp;</code> or <code>||</code> needs <code>branch(cond, () =&gt; ..., () =&gt; ...)</code>: the line under the editor warns when it is missing.</p>
 </details>
 </main>
 <script src="../src/core.js"></script>
@@ -22,7 +22,7 @@
 <script src="../src/ble.js"></script>
 <script src="../src/lib.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
-<script src="../src/align.js"></script>
+<script src="../src/check.js"></script>
 <script src="playground.js"></script>
 <script src="presets.js"></script>
 <script>Playground.mount(document.getElementById('pg'), { presets: PRESETS, tabs: true, height: 520 });</script>

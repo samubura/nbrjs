@@ -34,7 +34,7 @@ var program = () => hops(sense('source'));
 <h2>Why NbrJS</h2>
 <div class="features">
   <div><h3>The operators you know</h3><p><code>nbr</code>, <code>rep</code>, <code>share</code>, <code>branch</code>, <code>xc</code>, with the eXchange Calculus semantics of ScaFi, FCPP and Collektive, plus a standard library of building blocks.</p></div>
-  <div><h3>Plain JavaScript control flow</h3><p>Write <code>if</code> and <code>?:</code> around aggregate code: the tools align it for you, like an explicit <code>branch</code>.</p></div>
+  <div><h3>Plain JavaScript</h3><p>Programs are ordinary functions, and what you write is what runs on the device. The playground checks your code and warns where an <code>if</code> needs a <code>branch</code>.</p></div>
   <div><h3>Made for small devices</h3><p>About 3 KB minified, running from flash. Over Bluetooth a gradient takes 3 bytes per message.</p></div>
   <div><h3>From the browser to the board</h3><p>Simulate, then upload over Bluetooth or USB straight from the playground. Bluetooth needs no infrastructure; WiFi suits robots that know their position.</p></div>
 </div>
@@ -67,6 +67,6 @@ start(program, {
 <script src="../src/ble.js"></script>
 <script src="../src/lib.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
-<script src="../src/align.js"></script>
+<script src="../src/check.js"></script>
 <script src="playground.js"></script>
 <script src="site.js"></script>

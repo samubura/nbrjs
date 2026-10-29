@@ -9,51 +9,63 @@
 <nav id="toc"></nav>
 <main>
 <h1>5 · Alignment and branches</h1>
-<p class="lead">Devices only exchange values computed by the same piece of the program. Around an <code>if</code>, this needs care, and NbrJS takes care of it.</p>
+<p class="lead">Devices only exchange values computed by the same piece of the program. Around an <code>if</code>, this needs <code>branch</code>.</p>
 
 <h2>Alignment</h2>
 <p>Every aggregate operator gets a <b>name</b> from its position in the program: the first is <code>x0</code>, the second <code>x1</code>, and so on. Two devices exchange values only under the same name: they are <b>aligned</b>. This is what lets you compose blocks without them interfering.</p>
 
 <h2>What goes wrong with a plain <code>if</code></h2>
-<p>On this line nodes 3 and 4 are obstacles (in black, shift+click to change them). Obstacles should share 100 among themselves, the others 1, and each shows the largest value it sees. With alignment switched <b>off</b>, as it would be in plain JavaScript:</p>
-<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-obstacles="3,4" data-align="off">
-<script type="text/plain">
-var program = () => sense('obstacle') ? nbr(100).max() : nbr(1).max();
-</script>
-</div>
-<p>Nodes 2 and 5 show 100: <b>wrong</b>. Both <code>nbr</code> calls are the first operator of the program, so both are called <code>x0</code>: to the devices they are the same thing, and values leak across the border.</p>
-
-<h2>What NbrJS does</h2>
-<p>Before running your program, the playground and the device upload <b>rewrite</b> every <code>if</code>, <code>?:</code>, <code>&amp;&amp;</code> and <code>||</code> that wraps aggregate code into a <code>branch</code>. The same program as above, with alignment on, as everywhere else on this site:</p>
+<p>On this line nodes 3 and 4 are obstacles (in black, shift+click to change them). Obstacles should share 100 among themselves, the others 1, and each shows the largest value it sees:</p>
 <div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-obstacles="3,4">
 <script type="text/plain">
 var program = () => sense('obstacle') ? nbr(100).max() : nbr(1).max();
 </script>
 </div>
-<p>Now nodes 2 and 5 show 1. <code>branch(condition, () =&gt; ..., () =&gt; ...)</code> runs one side and puts the condition in the name: the operators become <code>b0.1/x0</code> and <code>b0.0/x0</code>. Devices that took different sides are no longer aligned, and the network splits into two separate <b>domains</b>. Hover a node to see the names in its message.</p>
-<p>Named functions get the same treatment: two different functions never share messages, even when one variable holds either of them.</p>
-<div class="note">The rewrite happens in the tools: the playground, its device upload and <code>scripts/bundle.js</code>. Code typed straight into the Espruino console is not rewritten: there, write <code>branch(...)</code> yourself around aggregate code.</div>
+<p>Nodes 2 and 5 show 100: <b>wrong</b>. Both <code>nbr</code> calls are the first operator of the program, so both are called <code>x0</code>: to the devices they are the same thing, and values leak across the border. The playground spots this and warns you under the editor.</p>
+
+<h2><code>branch</code></h2>
+<p><code>branch(condition, () =&gt; ..., () =&gt; ...)</code> runs one side and puts the condition in the name:</p>
+<div class="pg-embed" data-layout="line" data-nodes="8" data-sources="" data-obstacles="3,4">
+<script type="text/plain">
+var program = () => branch(sense('obstacle'), () => nbr(100).max(), () => nbr(1).max());
+</script>
+</div>
+<p>Now nodes 2 and 5 show 1. The operators become <code>b0.1/x0</code> and <code>b0.0/x0</code>: devices that took different sides are no longer aligned, and the network splits into two separate <b>domains</b>. Hover a node to see the names in its message.</p>
+
+<h2>When a plain <code>if</code> is fine</h2>
+<p>Only aggregate code needs <code>branch</code>. A condition on local values, like <code>src ? 0 : d.min() + 1</code> inside <code>share</code>, is plain JavaScript. So is an early <code>return</code> with no aggregate code on its side, because nothing comes after it to shift:</p>
+<pre><code>var program = () => {
+  if (sense('obstacle')) return null;
+  return distanceTo(sense('source'));
+};</code></pre>
+<p>Watch out for an operator inside an <code>if</code> followed by more operators: on the devices that skip it, all the following names shift by one.</p>
+<div class="note">The playground and <code>scripts/bundle.js</code> check your program and warn about aggregate code under <code>if</code>, <code>?:</code>, <code>&amp;&amp;</code>, <code>||</code>, loops and <code>.map()</code>. They never change it: the code that runs on the device is the code you wrote, whichever tool uploads it.</div>
 
 <h2>A gradient that goes around obstacles</h2>
 <p>With a branch, obstacles leave the computation, and the gradient flows around them.</p>
 <div class="pg-embed" data-nodes="49" data-sources="0" data-obstacles="3,10,17,24,31,38">
 <script type="text/plain">
-var program = () => sense('obstacle') ? null : distanceTo(sense('source'));
+var program = () => branch(sense('obstacle'), () => null, () => distanceTo(sense('source')));
 </script>
 </div>
+<p>To pick a function at run time, as in <code>var f = c ? hopsTo : distanceTo; f(src)</code>, wrap your own functions with <code>aggregate('name', fn)</code>: different functions then never share messages, at no cost in message size. The library functions already are.</p>
 
 <h2>Try it</h2>
 <p class="task">1. Two separate worlds: nodes with x &lt; 3 compute the gradient, the others count their neighbours.</p>
-<p class="task">2. Write the obstacle gradient with an explicit <code>branch</code>, as you would in the Espruino console.</p>
+<p class="task">2. Remove the <code>branch</code> from the obstacle gradient and use an early <code>return</code> instead. Why does it still work?</p>
 <div class="pg-embed" data-nodes="49" data-sources="0">
 <script type="text/plain">
 var program = () => distanceTo(sense('source'));
 </script>
 </div>
 <details><summary>Solutions</summary>
-<pre><code>var program = () => sense('x') &lt; 3 ? distanceTo(sense('source')) : neighbourCount();
+<pre><code>var program = () => branch(sense('x') &lt; 3, () => distanceTo(sense('source')), () => neighbourCount());
 
-var program = () => branch(sense('obstacle'), () => null, () => distanceTo(sense('source')));</code></pre>
+var program = () => {
+  if (sense('obstacle')) return null;
+  return distanceTo(sense('source'));
+};</code></pre>
+<p>Obstacles run no aggregate code at all, so they send nothing under <code>distanceTo</code>'s name and drop out of its domain, as with the branch.</p>
 </details>
 <footer id="pager"></footer>
 </main>
@@ -63,6 +75,6 @@ var program = () => branch(sense('obstacle'), () => null, () => distanceTo(sense
 <script src="../src/ble.js"></script>
 <script src="../src/lib.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/acorn/8.14.0/acorn.min.js"></script>
-<script src="../src/align.js"></script>
+<script src="../src/check.js"></script>
 <script src="playground.js"></script>
 <script src="site.js"></script>

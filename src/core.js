@@ -134,13 +134,6 @@
       return scoped(tok(name + ':'), false, function () { return fn.apply(self, args); });
     };
   };
-  // A branch over statements, for code rewritten by the alignment transform (web/align.js):
-  // if (enterIf(c)) { try { ... } finally { exit(); } } else { try { ... } finally { exit(); } }
-  exports.enterIf = function (cond) {
-    enter(tok('b') + (cond ? '.1' : '.0'), true);
-    return cond;
-  };
-  exports.exit = exit;
   exports.id = function () { return ctx.id; };
   exports.sense = function (name) { return ctx.sensors[name]; };
   exports.nbrSense = function (name) {
