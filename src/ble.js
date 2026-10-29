@@ -7,9 +7,10 @@
   var MAGIC = 'N';
   var MAX = 23; // 31-byte advert - flags (3) - manufacturer header (4) - MAGIC (1)
 
-  // Short device id from the BLE address: "aa:bb:cc:dd:ee:ff random" -> "eeff".
+  // Device id from the BLE address, a number: "aa:bb:cc:dd:ee:ff random" -> 0xeeff = 61183.
+  // A number takes 4 bytes in a message, against 6 for the string "eeff".
   // ponytail: 16 bits, collisions unlikely in small swarms; use more bytes if they grow.
-  var shortId = function (addr) { return addr.substr(12, 5).replace(':', ''); };
+  var shortId = function (addr) { return parseInt(addr.substr(12, 5).replace(':', ''), 16); };
 
   // Binary messages, since adverts are tiny. Per entry: 2-byte path hash, a tag, the value.
   // Tag: 0-63 a small integer itself | 64 + index in SPECIAL | 80 + n: an array of n < 16 tagged values
@@ -51,7 +52,7 @@
       var ov = m[1], ids = ov ? Object.keys(ov) : [];
       out += val(m[0], ids.length ? 128 : 0);
       if (ids.length) out += chr(ids.length);
-      for (var i = 0; i < ids.length; i++) out += two(parseInt(ids[i], 16)) + val(ov[ids[i]], 0);
+      for (var i = 0; i < ids.length; i++) out += two(+ids[i]) + val(ov[ids[i]], 0);
     }
     return out;
   };
@@ -79,7 +80,7 @@
       if (t & 128) {
         var ov = {};
         for (var n = byte(); n > 0; n--) {
-          var id = ('000' + (byte() << 8 | byte()).toString(16)).slice(-4);
+          var id = String(byte() << 8 | byte());
           ov[id] = get(byte());
         }
         e.push(ov);
@@ -90,27 +91,16 @@
   };
 
   // The BLE wire format for the simulator, sim.network(pos, range, nbrjsBle.sim): hashed paths,
-  // float32 numbers and the 23-byte limit show up before flashing a board.
-  // ponytail: sim ids must be numbers below 65536, sent as the 16-bit ids BLE uses.
-  var ids = function (msg, to) {
-    var out = {};
-    for (var k in msg) {
-      var m = msg[k], ov = m[1];
-      out[k] = m;
-      if (!ov) continue;
-      var o = {};
-      for (var j in ov) o[to(j)] = ov[j];
-      out[k] = [m[0], o];
-    }
-    return out;
-  };
+  // float32 numbers, ids as wide as real ones (node 3 is 40963) and the 23-byte limit show up
+  // before flashing a board.
   exports.sim = {
     hashed: true,
+    id: function (key) { return 40960 + +key; },
     encode: function (msg) {
-      var data = exports.pack(ids(msg, function (j) { return (+j).toString(16); }));
+      var data = exports.pack(msg);
       return data.length > MAX ? '' : data; // as on a board: too big, nothing sent
     },
-    decode: function (s) { return ids(exports.unpack(s), function (j) { return String(parseInt(j, 16)); }); }
+    decode: exports.unpack
   };
 
   // Usually reached through require('nbrjs').start(program, {target: 'ble', ...}).

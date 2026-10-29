@@ -156,7 +156,7 @@ check('sim over BLE: a message over 23 bytes is not sent', run(bleLine(2), funct
 }, 2), { 0: 0, 1: 0 });
 var rich = {};
 rich[A.hash('b0.1')] = 1;
-rich[A.hash('b0.1/x0')] = [Infinity, { '00aa': 3, 'beef': -2.5 }];
+rich[A.hash('b0.1/x0')] = [Infinity, { '170': 3, '48879': -2.5 }];
 rich[A.hash('x1')] = [NaN];
 rich[A.hash('x2')] = [null];
 rich[A.hash('x3')] = [-100000];
@@ -181,13 +181,13 @@ var link = A.start(function () {
   return [nbr(id()).reduce(function (acc, v) { return acc + v; }, ''), Math.round(A.nbrSense('range').min() * 100) / 100];
 }, { target: 'ble', period: 1e6, scan: 1e6 });
 var m2 = {};
-m2[A.hash('x0')] = ['0002'];
+m2[A.hash('x0')] = [2];
 onScan({ id: 'aa:bb:cc:dd:00:02 public', rssi: -50, manufacturer: 0x0590, manufacturerData: bytes('N' + ble.pack(m2)) });
 onScan({ id: 'aa:bb:cc:dd:00:03 public', rssi: -50, manufacturer: 0x004c, manufacturerData: bytes('Nxx') });
 var r = link.round();
 link.stop();
 check('ble hears neighbours and advertises compactly', [link.id, r.value[0], r.value[1], ble.unpack(adv.manufacturerData.slice(1))[A.hash('x0')], adv.manufacturerData.length],
-  ['0001', '0002', 0.32, ['0001'], 1 + 2 + 2 + 4]);
+  [1, '2', 0.32, [1], 1 + 2 + 1]);
 
 // UDP over WiFi against a fake socket: hears a neighbour, ignores itself, broadcasts its message.
 var sent = null, onMsg = null;
