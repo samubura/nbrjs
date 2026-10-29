@@ -1,8 +1,8 @@
-<img src="web/logo.svg" width="88" align="right" alt="NbrJS logo">
+<p align="center"><img src="web/logo.svg" width="120" alt="NbrJS logo"></p>
 
-# NbrJS
+<h1 align="center">NbrJS</h1>
 
-[![CI](https://github.com/samubura/nbrjs/actions/workflows/ci.yml/badge.svg)](https://github.com/samubura/nbrjs/actions/workflows/ci.yml)
+<p align="center"><a href="https://github.com/samubura/nbrjs/actions/workflows/ci.yml"><img src="https://github.com/samubura/nbrjs/actions/workflows/ci.yml/badge.svg" alt="CI"></a></p>
 
 Aggregate computing in JavaScript, with eXchange Calculus (XC) semantics. One program for the whole network,
 running in the browser, in Node, and on [Espruino](https://www.espruino.com/) boards: swarms of Puck.js, or ESP32 robots
