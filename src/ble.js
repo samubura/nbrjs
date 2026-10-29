@@ -4,8 +4,7 @@
 // Loads in the browser too (pack/unpack only), where the playground uses it to show BLE sizes.
 (function (exports, A) {
   var COMPANY = 0x0590; // Espruino's BLE company id, meant for this kind of use
-  var MAGIC = 'N';
-  var MAX = 23; // 31-byte advert - flags (3) - manufacturer header (4) - MAGIC (1)
+  var MAX = 23; // 31-byte advert - flags (3) - manufacturer header (4) - first byte (A.magic)
 
   // Device id from the BLE address, a number: "aa:bb:cc:dd:ee:ff random" -> 0xeeff = 61183.
   // A number takes 4 bytes in a message, against 6 for the string "eeff".
@@ -64,7 +63,7 @@
       if (t < 64) return t;
       if (t === 71) {
         var z = 0, b, sh = 0;
-        do { b = byte(); z += (b & 127) * Math.pow(2, sh); sh += 7; } while (b & 128);
+        do { b = byte(); z += (b & 127) * (1 << sh); sh += 7; } while (b & 128); // not Math.pow: inexact on Espruino 2v29
         return z % 2 ? -(z + 1) / 2 : z / 2;
       }
       if (t === 72) return new Float32Array(new Uint8Array([byte(), byte(), byte(), byte()]).buffer)[0];
@@ -90,7 +89,7 @@
     return msg;
   };
 
-  // The BLE wire format for the simulator, sim.network(pos, range, nbrjsBle.sim): hashed paths,
+  // The BLE wire format for the simulator, sim.network(pos, range, {codec: nbrjsBle.sim}): hashed paths,
   // float32 numbers, ids as wide as real ones (node 3 is 40963) and the 23-byte limit show up
   // before flashing a board.
   exports.sim = {
@@ -106,19 +105,20 @@
   // Usually reached through require('nbrjs').start(program, {target: 'ble', ...}).
   // opts: {period ms (1000), ttl s (3 periods), scan: ms of listening per period (400; >= period
   //        listens all the time), minRssi: ignore weaker neighbours (dBm), txPower: RSSI at 1 m (-60),
+  //        group: only hear devices with the same group (e.g. the program's name),
   //        sensors: (id) => ({...}), onResult: (value, id) => ...}
   // Neighbour sensors: nbrSense('rssi') in dBm, nbrSense('range') a rough distance in metres.
   exports.start = function (program, opts) {
     opts = opts || {};
     var period = opts.period || 1000, ttl = opts.ttl || 3 * period / 1000, scan = opts.scan || 400;
     var tx = opts.txPower || -60, minRssi = opts.minRssi || -200;
-    var id = shortId(NRF.getAddress()), dev = A.device(id, true);
+    var id = shortId(NRF.getAddress()), dev = A.device(id, true), magic = A.magic(opts.group);
     var inbox = {}, rssi = {}, range = {}, seen = {}, stopScan = null;
 
     var heard = function (d) {
       if (d.manufacturer !== COMPANY || d.rssi < minRssi) return; // filters may be ignored (ESP32)
       var s = String.fromCharCode.apply(null, new Uint8Array(d.manufacturerData));
-      if (s[0] !== MAGIC) return;
+      if (s[0] !== magic) return;
       var j = shortId(d.id);
       try { inbox[j] = exports.unpack(s.slice(1)); } catch (e) { return; }
       rssi[j] = d.rssi;
@@ -140,7 +140,7 @@
       var data = exports.pack(r.message);
       // Too big: send an empty message rather than a stale one; neighbours then skip us.
       if (data.length > MAX) console.log('nbrjs: message is ' + data.length + ' bytes, BLE fits ' + MAX);
-      NRF.setAdvertising({}, { showName: false, manufacturer: COMPANY, manufacturerData: MAGIC + (data.length > MAX ? '' : data), interval: 100 });
+      NRF.setAdvertising({}, { showName: false, manufacturer: COMPANY, manufacturerData: magic + (data.length > MAX ? '' : data), interval: 100 });
       if (opts.onResult) opts.onResult(r.value, id);
       if (!stopScan && scan < period) listen();
       return r;

@@ -139,13 +139,19 @@ check('hashed keys give the same results', run(hashedNet, grad, 6, srcs), run(li
 
 // Binary BLE format: round trip, and it is small.
 var ble = require('nbrjs/ble');
+// Lossy radio: messages lost and rounds missed. A gradient still gets there. (With a short ttl a neighbour
+// sometimes expires, and hops briefly rise: as on a real radio.)
+var lossy = sim.network(line(6).pos, 1.5, { loss: 0.3, skip: 0.3, ttl: 10 }); // ttl: a neighbour rarely expires
+check('sim with loss and skipped rounds: hopsTo still converges', run(lossy, function () { return L.hopsTo(sense('source')); }, 150, src0),
+  { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 });
+
 // The simulator with the BLE format: per-neighbour overrides, float32, the 23-byte limit.
-var bleLine = function (n) { var l = line(n); return sim.network(l.pos, 1.5, ble.sim); };
+var bleLine = function (n) { var l = line(n); return sim.network(l.pos, 1.5, { codec: ble.sim }); };
 check('sim over BLE: collectSum counts the line', run(bleLine(5), function () {
   var s = sense('source');
   return L.collectSum(L.hopsTo(s), 1);
 }, 20, src0)[0], 5);
-var bleLeaders = sim.network(sim.layout('random', 40, 42), 1.5, ble.sim);
+var bleLeaders = sim.network(sim.layout('random', 40, 42), 1.5, { codec: ble.sim });
 var bleSettled = JSON.stringify(run(bleLeaders, lp, 60));
 check('sim over BLE: isLeader settles', JSON.stringify(run(bleLeaders, lp, 20)), bleSettled);
 check('sim over BLE: leader messages fit an advert', Object.keys(bleLeaders.messages).filter(function (i) {
@@ -164,9 +170,17 @@ rich[A.hash('x4')] = ['hi'];
 rich[A.hash('x5')] = [[1, true]];
 var back = ble.unpack(ble.pack(rich));
 check('ble binary format round-trips', [A.encode(back), isNaN(back[A.hash('x1')][0])], [A.encode(rich), true]);
+var ints = [64, 8191, 40963, 100000, -70000, 2147483647, -2147483648];
+check('ble integers round-trip exactly', ints.map(function (v) { return ble.unpack(ble.pack({ 1: [v] }))[1][0]; }), ints);
 var hop = {};
 hop[A.hash('x0')] = [7];
 check('ble message sizes', [ble.pack(hop).length, ble.pack(rich).length], [3, 40]);
+
+check('groups: a first byte per group, printable, N without one', [A.magic(), A.magic('swarm') === A.magic('swarm'),
+  A.magic('swarm') !== A.magic('robots'), A.magic('swarm').charCodeAt(0) > 32 && A.magic('swarm').charCodeAt(0) < 127], ['N', true, true, true]);
+
+var nan = A.decode(A.encode({ x0: [NaN, { 1: [1, NaN] }] }));
+check('NaN survives JSON', [isNaN(nan.x0[0]), nan.x0[1][1][0], isNaN(nan.x0[1][1][1])], [true, 1, true]);
 
 // BLE transport against a fake NRF (no radio here): hears a neighbour, advertises a compact message.
 var adv = null, onScan = null;
@@ -184,6 +198,7 @@ var m2 = {};
 m2[A.hash('x0')] = [2];
 onScan({ id: 'aa:bb:cc:dd:00:02 public', rssi: -50, manufacturer: 0x0590, manufacturerData: bytes('N' + ble.pack(m2)) });
 onScan({ id: 'aa:bb:cc:dd:00:03 public', rssi: -50, manufacturer: 0x004c, manufacturerData: bytes('Nxx') });
+onScan({ id: 'aa:bb:cc:dd:00:04 public', rssi: -50, manufacturer: 0x0590, manufacturerData: bytes(A.magic('other') + ble.pack(m2)) });
 var r = link.round();
 link.stop();
 check('ble hears neighbours and advertises compactly', [link.id, r.value[0], r.value[1], ble.unpack(adv.manufacturerData.slice(1))[A.hash('x0')], adv.manufacturerData.length],

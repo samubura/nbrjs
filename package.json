@@ -10,16 +10,27 @@
     "url": "git+https://github.com/samubura/nbrjs.git"
   },
   "bugs": "https://github.com/samubura/nbrjs/issues",
+  "types": "types/index.d.ts",
   "exports": {
-    ".": "./src/core.js",
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/core.js"
+    },
     "./sim": "./src/sim.js",
     "./ble": "./src/ble.js",
     "./host": "./src/host.js",
     "./udp": "./src/udp.js",
-    "./lib": "./src/lib.js"
+    "./lib": {
+      "types": "./types/lib.d.ts",
+      "default": "./src/lib.js"
+    },
+    "./types/globals": {
+      "types": "./types/globals.d.ts"
+    }
   },
   "files": [
     "src",
+    "types",
     "examples",
     "scripts/bundle.js",
     "NOTICE"

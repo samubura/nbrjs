@@ -22,6 +22,7 @@
     '  period: 200,',
     "  nodes: 40, layout: 'random', range: 1.5,",
     '  sources: [0], obstacles: [],',
+    "  // as on a real radio: loss: 0.2 loses 20% of the messages, skip: 0.2 misses 20% of the rounds",
     "  // extra sensors for every node, read with sense('name') in program.js",
     '  sensors: (id, x, y, round) => ({})',
     '};'
@@ -186,7 +187,7 @@
     };
     var restart = function () {
       // target 'ble': messages in the BLE format, so float32, hashed paths and the 23-byte limit show here.
-      net = S.network(pos, +range.value, overBle() ? nbrjsBle.sim : null);
+      net = S.network(pos, +range.value, { codec: overBle() ? nbrjsBle.sim : null, loss: cfg.loss, skip: cfg.skip, ttl: cfg.ttl });
       if (remote) net.devices[remote.id] = remote;
       out = {};
       rounds = 0;

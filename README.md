@@ -61,13 +61,14 @@ but never rewrite your code, so it behaves the same from the Espruino IDE.
 
 ## Targets
 
-All targets take `period` (ms), `sensors(id)` (values for `sense()`) and `onResult(value, id)`.
+All targets take `period` (ms), `sensors(id)` (values for `sense()`) and `onResult(value, id)`. On `ble` and `udp`,
+`group: 'name'` makes devices hear only those with the same group, at no cost in bytes.
 
 | target | where | options |
 |---|---|---|
-| `ble` | Puck.js, ESP32 | `ttl` (s), `scan` (ms of listening per period, 400), `minRssi`, `txPower`. No infrastructure; `id()` is a number (the last 2 bytes of the address), `nbrSense('rssi')`, and `nbrSense('range')` estimated in metres. In the playground, `target: 'ble'` simulates with the same binary messages (`sim.network(pos, range, require('nbrjs/ble').sim)`) |
+| `ble` | Puck.js, ESP32 | `ttl` (s), `scan` (ms of listening per period, 400), `minRssi`, `txPower`. No infrastructure; `id()` is a number (the last 2 bytes of the address), `nbrSense('rssi')`, and `nbrSense('range')` estimated in metres. In the playground, `target: 'ble'` simulates with the same binary messages (`sim.network(pos, range, {codec: require('nbrjs/ble').sim})`) |
 | `udp` | ESP32, Node | `wifi: {ssid, password}`, `position: () => [x, y]`, `range`, `port`, `address`. Broadcast over WiFi; with positions, neighbours are those within `range` |
-| `sim` | browser, Node | `nodes`, `layout` (`random`, `grid`, `line`), `range`; `nbrSense('range')` is the distance |
+| `sim` | browser, Node | `nodes`, `layout` (`random`, `grid`, `line`), `range`; `nbrSense('range')` is the distance. As on a radio: `loss` (share of messages lost), `skip` (share of rounds missed), `ttl` (rounds a silent neighbour is kept) |
 | `host` | a board tethered to a PC | the PC runs the rounds and simulates the neighbours ([demo](https://samubura.github.io/nbrjs/web/puck.html)) |
 
 ## On a board
@@ -75,6 +76,8 @@ All targets take `period` (ms), `sensors(id)` (values for `sense()`) and `onResu
 - **From the playground** (Chrome or Edge): *Sul dispositivo ↗* installs the library in the board's `Storage` over Bluetooth or USB, then uploads the program, optionally saved to start at boot.
 - **From the Espruino Web IDE**: add `https://samubura.github.io/nbrjs/modules` to *Settings → Communications → Module URL*, and `require('nbrjs')` works like any Espruino module.
 - **From the command line**: `node scripts/bundle.js app.js > app.bundle.js` inlines the minified modules, ready for the `espruino` CLI.
+
+Editors get types from `types/` (TypeScript declarations); for the globals, `/// <reference types="nbrjs/types/globals" />`.
 
 ## Development
 

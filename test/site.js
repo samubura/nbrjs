@@ -19,7 +19,7 @@ var boot = function (code) {
   return p;
 };
 var settles = function (p, attrs, codec) {
-  var pos = S.layout(attrs.layout || 'random', +(attrs.nodes || 40), 42), net = S.network(pos, 1.5, codec), sens = {};
+  var pos = S.layout(attrs.layout || 'random', +(attrs.nodes || 40), 42), net = S.network(pos, 1.5, { codec: codec }), sens = {};
   var src = attrs.sources === '' ? [] : String(attrs.sources || '0').split(',').map(Number);
   var obs = String(attrs.obstacles || '').split(',').filter(Boolean).map(Number);
   for (var id in pos) sens[id] = { source: src.indexOf(+id) >= 0, obstacle: obs.indexOf(+id) >= 0, x: pos[id][0], y: pos[id][1], temp: 20 + Math.round(pos[id][0]), light: 0.5 };
@@ -64,6 +64,10 @@ fs.readdirSync(web).filter(function (f) { return /\.html$/.test(f); }).sort().fo
 });
 var g = {};
 vm.runInNewContext(fs.readFileSync(path.join(web, 'presets.js'), 'utf8') + ';this.P = PRESETS', g);
+// The Puck demos: ['name', "program"] pairs in puck.html's script, with its simulated neighbours.
+var puck = fs.readFileSync(path.join(web, 'puck.html'), 'utf8').match(/var demos = (\[[\s\S]*?\n  \])/)[1];
+vm.runInNewContext('this.D = ' + puck, g);
+g.D.forEach(function (d) { g.P.push({ name: 'puck: ' + d[0], program: d[1], config: "return { nodes: 24, layout: 'random', sources: [] };" }); });
 g.P.forEach(function (p) {
   var attrs = { test: p.test };
   if (p.config) {

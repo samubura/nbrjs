@@ -187,6 +187,12 @@
     for (var i = 0; i < p.length; i++) h = (h * 31 + p.charCodeAt(i)) % 65521;
     return String(h);
   };
+  // First byte of BLE adverts and UDP datagrams: 'N', or one derived from start(..., {group}), so
+  // devices running different programs ignore each other at no cost in bytes.
+  // ponytail: 94 printable values, two groups share one with odds 1 in 94; use more bytes if it bites.
+  exports.magic = function (group) {
+    return group ? String.fromCharCode(33 + +exports.hash(String(group)) % 94) : 'N';
+  };
   var plain = function (p) { return p; };
 
   // inbox: {neighbourId: message}; returns {value, message} to broadcast.
@@ -211,11 +217,12 @@
     };
   };
 
-  // JSON turns ±Infinity into null, which breaks gradients: write ±1e999 instead,
-  // valid JSON that parses back to ±Infinity and is short enough for BLE. NaN stays null.
+  // JSON turns ±Infinity and NaN into null, which breaks gradients: write ±1e999 instead, valid
+  // JSON that parses back to ±Infinity and is short enough for BLE, and NaN as "~nan~".
   function mark(v) {
     if (v === Infinity) return '~inf~';
     if (v === -Infinity) return '~-inf~';
+    if (v !== v) return '~nan~';
     if (!v || typeof v !== 'object') return v;
     var o = Array.isArray(v) ? [] : {};
     // Not for...in: recursing 4+ levels inside it corrupts refcounts on Espruino 2v29.
@@ -226,5 +233,13 @@
     // Not split/join: on Espruino 2v29 splitting a string shorter than the separator gives [].
     return JSON.stringify(mark(msg)).replace(/"~inf~"/g, '1e999').replace(/"~-inf~"/g, '-1e999');
   };
-  exports.decode = function (str) { return JSON.parse(str); };
+  function unnan(v) {
+    if (v === '~nan~') return NaN;
+    if (v && typeof v === 'object') Object.keys(v).forEach(function (k) { v[k] = unnan(v[k]); });
+    return v;
+  }
+  exports.decode = function (str) {
+    var v = JSON.parse(str);
+    return str.indexOf('~nan~') < 0 ? v : unnan(v); // rare: no walk otherwise
+  };
 })(typeof exports === 'undefined' ? (this.nbrjs = {}) : exports);
