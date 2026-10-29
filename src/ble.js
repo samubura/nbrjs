@@ -89,15 +89,34 @@
     return msg;
   };
 
+  // A message over MAX bytes is split into chunks of whole entries, at most `max` of them, that the
+  // board advertises in turn. A lost chunk only loses its operators: neighbours are then not aligned
+  // with them, as with a lost message. Entries that do not fit are left out.
+  exports.split = function (msg, max) {
+    var out = [], cur = '';
+    for (var k in msg) {
+      var one = {};
+      one[k] = msg[k];
+      var e = exports.pack(one);
+      if (e.length > MAX - 1) continue; // never fits, even alone (a chunk also carries the round)
+      if (cur.length + e.length > MAX - 1) { out.push(cur); cur = ''; }
+      cur += e;
+    }
+    if (cur) out.push(cur);
+    return out.slice(0, max);
+  };
+
   // The BLE wire format for the simulator, sim.network(pos, range, {codec: nbrjsBle.sim}): hashed paths,
   // float32 numbers, ids as wide as real ones (node 3 is 40963) and the 23-byte limit show up
   // before flashing a board.
   exports.sim = {
     hashed: true,
     id: function (key) { return 40960 + +key; },
+    chunks: 4, // as many as a 400 ms listening window hears, at one advert every 100 ms
+    // A string, or the chunks of a message over MAX bytes (the simulator hears or loses each one).
     encode: function (msg) {
       var data = exports.pack(msg);
-      return data.length > MAX ? '' : data; // as on a board: too big, nothing sent
+      return data.length > MAX ? exports.split(msg, exports.sim.chunks) : data;
     },
     decode: exports.unpack
   };
@@ -106,21 +125,38 @@
   // opts: {period ms (1000), ttl s (3 periods), scan: ms of listening per period (400; >= period
   //        listens all the time), minRssi: ignore weaker neighbours (dBm), txPower: RSSI at 1 m (-60),
   //        group: only hear devices with the same group (e.g. the program's name),
+  //        chunks: adverts a message over 23 bytes may take (as many as a listening window hears,
+  //        one advert every 100 ms: 4 by default),
   //        sensors: (id) => ({...}), onResult: (value, id) => ...}
   // Neighbour sensors: nbrSense('rssi') in dBm, nbrSense('range') a rough distance in metres.
   exports.start = function (program, opts) {
     opts = opts || {};
     var period = opts.period || 1000, ttl = opts.ttl || 3 * period / 1000, scan = opts.scan || 400;
     var tx = opts.txPower || -60, minRssi = opts.minRssi || -200;
+    var chunks = opts.chunks || Math.max(1, Math.floor(Math.min(scan, period) / 100));
     var id = shortId(NRF.getAddress()), dev = A.device(id, true), magic = A.magic(opts.group);
-    var inbox = {}, rssi = {}, range = {}, seen = {}, stopScan = null;
+    // Chunked adverts start with the magic byte + 128, then the sender's round number.
+    var chunked = String.fromCharCode(magic.charCodeAt(0) | 128), count = 0;
+    // parts[j]: [round, entries heard in it, entries of the round before], so a chunk not heard yet
+    // keeps its entries from the previous round.
+    var inbox = {}, rssi = {}, range = {}, seen = {}, parts = {}, stopScan = null;
 
     var heard = function (d) {
       if (d.manufacturer !== COMPANY || d.rssi < minRssi) return; // filters may be ignored (ESP32)
       var s = String.fromCharCode.apply(null, new Uint8Array(d.manufacturerData));
-      if (s[0] !== magic) return;
-      var j = shortId(d.id);
-      try { inbox[j] = exports.unpack(s.slice(1)); } catch (e) { return; }
+      var j = shortId(d.id), msg, k;
+      if (s[0] === magic) {
+        try { msg = exports.unpack(s.slice(1)); } catch (e) { return; }
+      } else if (s[0] === chunked) {
+        var r = s.charCodeAt(1), p = parts[j], e;
+        try { e = exports.unpack(s.slice(2)); } catch (x) { return; }
+        if (!p || p[0] !== r) p = parts[j] = [r, {}, p && (p[0] + 1 & 255) === r ? p[1] : {}];
+        for (k in e) p[1][k] = e[k];
+        msg = {};
+        for (k in p[2]) msg[k] = p[2][k];
+        for (k in p[1]) msg[k] = p[1][k];
+      } else return;
+      inbox[j] = msg;
       rssi[j] = d.rssi;
       // ponytail: log-distance path loss with exponent 2; calibrate txPower per board and place.
       range[j] = Math.pow(10, (tx - d.rssi) / 20);
@@ -135,12 +171,18 @@
     // Also callable on events (setWatch) for an immediate round.
     var round = function () {
       var now = getTime();
-      for (var j in seen) if (now - seen[j] > ttl) { delete inbox[j]; delete rssi[j]; delete range[j]; delete seen[j]; }
+      for (var j in seen) if (now - seen[j] > ttl) { delete inbox[j]; delete rssi[j]; delete range[j]; delete seen[j]; delete parts[j]; }
       var r = dev.round(program, inbox, opts.sensors ? opts.sensors(id) : {}, { rssi: rssi, range: range });
-      var data = exports.pack(r.message);
-      // Too big: send an empty message rather than a stale one; neighbours then skip us.
-      if (data.length > MAX) console.log('nbrjs: message is ' + data.length + ' bytes, BLE fits ' + MAX);
-      NRF.setAdvertising({}, { showName: false, manufacturer: COMPANY, manufacturerData: magic + (data.length > MAX ? '' : data), interval: 100 });
+      var data = exports.pack(r.message), adv = function (m) { return { showName: false, manufacturer: COMPANY, manufacturerData: m, interval: 100 }; };
+      if (data.length <= MAX) NRF.setAdvertising({}, adv(magic + data));
+      else {
+        // Too big for one advert: the board cycles through the chunks (an array of raw adverts).
+        var cs = exports.split(r.message, chunks), rn = String.fromCharCode(count++ & 255);
+        if (cs.join('').length < data.length) console.log('nbrjs: message is ' + data.length + ' bytes, ' + chunks + ' adverts carry part of it');
+        // ponytail: raw adverts in an array, as Espruino's docs describe; check on each board (ESP32 especially).
+        if (!cs.length) NRF.setAdvertising({}, adv(magic));
+        else NRF.setAdvertising(cs.map(function (c) { return NRF.getAdvertisingData({}, adv(chunked + rn + c)); }), { interval: 100 });
+      }
       if (opts.onResult) opts.onResult(r.value, id);
       if (!stopScan && scan < period) listen();
       return r;

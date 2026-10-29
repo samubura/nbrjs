@@ -26,6 +26,24 @@
       var dx = pos[i][0] - pos[j][0], dy = pos[i][1] - pos[j][1];
       return Math.sqrt(dx * dx + dy * dy);
     };
+    // h[j]: [message, round heard, entries heard in that round]. A codec may split a message into
+    // chunks (an array), each heard or lost on its own; entries of chunks not heard this round stay
+    // from the round before, as on a board.
+    var hear = function (h, j, m) {
+      if (typeof m === 'string') { if (Math.random() >= loss) h[j] = [wire.decode(m), t, null]; return; }
+      var got = null, k, prev = h[j] && h[j][1] === t - 1 && h[j][2] || {};
+      m.forEach(function (c) {
+        if (Math.random() < loss) return;
+        var e = wire.decode(c);
+        got = got || {};
+        for (k in e) got[k] = e[k];
+      });
+      if (!got) return;
+      var msg = {};
+      for (k in prev) msg[k] = prev[k];
+      for (k in got) msg[k] = got[k];
+      h[j] = [msg, t, got];
+    };
     var net = {
       pos: pos,       // mutable: move devices by editing it
       range: range,   // mutable too
@@ -37,7 +55,7 @@
         t++;
         ids.forEach(function (i) {
           var h = heard[i] = heard[i] || {}, inbox = {}, dist = {}, j;
-          for (j in msgs) if (j !== i && far(i, j) <= net.range && Math.random() >= loss) h[j] = [wire.decode(msgs[j]), t];
+          for (j in msgs) if (j !== i && far(i, j) <= net.range) hear(h, j, msgs[j]);
           // Keyed by the neighbour's own id, which a codec may make differ from its position key.
           for (j in h) {
             if (t - h[j][1] >= ttl) { delete h[j]; continue; }

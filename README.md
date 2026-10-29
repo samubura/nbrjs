@@ -29,7 +29,7 @@ a [playground](https://samubura.github.io/nbrjs/web/playground.html) that also u
 ## Footprint
 
 - **Code:** ~3 KB minified. When installed in a board's `Storage`, as the playground does, it runs from flash: the core takes about 320 variables, against 475 for the same code uploaded as text (Espruino Linux build).
-- **BLE messages:** binary, with 2-byte path hashes. A hop gradient is 3 bytes, a gradient inside a `branch` 6 bytes, and the 23-byte advert fits 5–7 operators.
+- **BLE messages:** binary, with 2-byte path hashes. A hop gradient is 3 bytes, a gradient inside a `branch` 6 bytes, and a 23-byte advert fits 5–7 operators. Bigger messages go in up to 4 adverts sent in turn (`chunks`), each with whole operators.
 - **Objects:** `share({dist: Infinity, value: v}, ...)` sends `[dist, value]`, without field names. Every device runs the same program, so the receiver rebuilds the object from the operator's initial value, which also fixes its shape.
 - **Tests:** the suite runs on the Espruino interpreter in CI, on the minified bundle that ships to devices.
 
@@ -66,7 +66,7 @@ All targets take `period` (ms), `sensors(id)` (values for `sense()`) and `onResu
 
 | target | where | options |
 |---|---|---|
-| `ble` | Puck.js, ESP32 | `ttl` (s), `scan` (ms of listening per period, 400), `minRssi`, `txPower`. No infrastructure; `id()` is a number (the last 2 bytes of the address), `nbrSense('rssi')`, and `nbrSense('range')` estimated in metres. In the playground, `target: 'ble'` simulates with the same binary messages (`sim.network(pos, range, {codec: require('nbrjs/ble').sim})`) |
+| `ble` | Puck.js, ESP32 | `ttl` (s), `scan` (ms of listening per period, 400), `minRssi`, `txPower`, `chunks` (adverts a big message may take, 4). No infrastructure; `id()` is a number (the last 2 bytes of the address), `nbrSense('rssi')`, and `nbrSense('range')` estimated in metres. In the playground, `target: 'ble'` simulates with the same binary messages (`sim.network(pos, range, {codec: require('nbrjs/ble').sim})`) |
 | `udp` | ESP32, Node | `wifi: {ssid, password}`, `position: () => [x, y]`, `range`, `port`, `address`. Broadcast over WiFi; with positions, neighbours are those within `range` |
 | `sim` | browser, Node | `nodes`, `layout` (`random`, `grid`, `line`), `range`; `nbrSense('range')` is the distance. As on a radio: `loss` (share of messages lost), `skip` (share of rounds missed), `ttl` (rounds a silent neighbour is kept) |
 | `host` | a board tethered to a PC | the PC runs the rounds and simulates the neighbours ([demo](https://samubura.github.io/nbrjs/web/puck.html)) |

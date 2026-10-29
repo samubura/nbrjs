@@ -30,7 +30,7 @@
 <h2>2. Choose the network</h2>
 <p>ESP32 boards can talk over Bluetooth or WiFi. ESP-NOW, Espressif's direct protocol, is not available in Espruino.</p>
 <div class="features">
-  <div><h3>Bluetooth: <code>target: 'ble'</code></h3><p>No infrastructure: each board hears the ones nearby, Puck.js included, so the network follows the space. Messages up to 23 bytes. <code>nbrSense('range')</code> estimates distance from the signal; <code>minRssi</code> sets how far "near" is.</p></div>
+  <div><h3>Bluetooth: <code>target: 'ble'</code></h3><p>No infrastructure: each board hears the ones nearby, Puck.js included, so the network follows the space. Messages of 23 bytes per advert, up to 4 adverts sent in turn. <code>nbrSense('range')</code> estimates distance from the signal; <code>minRssi</code> sets how far "near" is.</p></div>
   <div><h3>WiFi: <code>target: 'udp'</code></h3><p>Boards join the same access point and broadcast to each other, with no practical limit on messages. Robots that know their position pass <code>position</code> and <code>range</code>, and get a spatial neighbourhood with real distances. A PC running Node can join too.</p></div>
 </div>
 <p>No router around? One ESP32 can be the access point for the others:</p>
@@ -77,7 +77,7 @@ start(program, {
   <li><b>The board does not show up as a port</b>: try another cable; some boards need the CP210x or CH340 driver.</li>
   <li><b>WiFi errors or reboots</b>: often the power supply. A weak USB port or regulator is not enough when WiFi transmits.</li>
   <li><b>Boards do not see each other on WiFi</b>: some routers isolate clients or filter broadcasts. Try a hotspot, or one ESP32 as access point.</li>
-  <li><b>"message is N bytes"</b> on the console: over Bluetooth the message does not fit in 23 bytes. Use fewer operators or small integers, or switch to WiFi.</li>
+  <li><b>"message is N bytes"</b> on the console: over Bluetooth the message does not fit even in 4 adverts (about 90 bytes), and part of it is left out. Use fewer operators or small integers, or switch to WiFi.</li>
 </ul>
 </main>
 <script src="site.js"></script>

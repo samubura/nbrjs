@@ -186,7 +186,7 @@
       status.className = 'pg-status' + (err ? ' err' : '');
     };
     var restart = function () {
-      // target 'ble': messages in the BLE format, so float32, hashed paths and the 23-byte limit show here.
+      // target 'ble': messages in the BLE format, so float32, hashed paths and the advert limits show here.
       net = S.network(pos, +range.value, { codec: overBle() ? nbrjsBle.sim : null, loss: cfg.loss, skip: cfg.skip, ttl: cfg.ttl });
       if (remote) net.devices[remote.id] = remote;
       out = {};
@@ -233,7 +233,7 @@
     var loadConfig = function () {
       try {
         cfg = typeof o.config === 'object' && !tabs ? o.config : evalConfig(confEl.value);
-        setStatus(overBle() ? "config.js: target 'ble', simulated with Bluetooth messages (binary, 23 bytes at most)" :
+        setStatus(overBle() ? "config.js: target 'ble', simulated with Bluetooth messages (binary, 23 bytes per advert, up to 4 adverts)" :
           cfg.target && cfg.target !== 'sim' ? "config.js: target '" + cfg.target + "' runs on devices; simulating it here" : '');
         reset();
       } catch (e) {
@@ -319,12 +319,19 @@
       roundEl.textContent = 'round ' + rounds;
       showInfo();
     };
+    // What a node sends over BLE: one advert, or chunks that it advertises in turn.
+    var bleSends = function (m) {
+      if (typeof m === 'string') return A.encode(nbrjsBle.unpack(m)) + ' · ' + (m.length + 1) + ' B';
+      if (!m.length) return 'nothing: no part fits an advert';
+      var all = {};
+      m.forEach(function (c) { var e = nbrjsBle.unpack(c); for (var k in e) all[k] = e[k]; });
+      return A.encode(all) + ' · ' + m.length + ' adverts, ' + m.map(function (c) { return c.length + 2; }).join(' + ') + ' B';
+    };
     var showInfo = function () {
       if (hover === null) { info.textContent = 'Click: source · Shift+click: obstacle · Drag: move · Hover: inspect'; return; }
       var m = net.messages[hover] || '', n = 0;
       for (var id in pos) if (id !== hover && Math.hypot(pos[id][0] - pos[hover][0], pos[id][1] - pos[hover][1]) <= net.range) n++;
-      var sends = !overBle() ? m + (m && window.nbrjsBle ? ' · over BLE ' + bleSize(m) + ' B' : '') :
-        hover in net.messages ? (m ? A.encode(nbrjsBle.sim.decode(m)) + ' · ' + (m.length + 1) + ' B' : 'nothing: over 23 bytes') : '';
+      var sends = !overBle() ? m + (m && window.nbrjsBle ? ' · over BLE ' + bleSize(m) + ' B' : '') : hover in net.messages ? bleSends(m) : '';
       info.textContent = 'node ' + hover + ' · value ' + JSON.stringify(out[hover]) + ' · ' + n + ' neighbours · sends ' + sends;
     };
 

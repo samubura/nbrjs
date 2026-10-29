@@ -187,7 +187,8 @@ var adv = null, onScan = null;
 NRF = {
   getAddress: function () { return 'aa:bb:cc:dd:00:01 public'; },
   setScan: function (cb) { if (cb) onScan = cb; },
-  setAdvertising: function (d, o) { if (o) adv = o; }
+  setAdvertising: function (d, o) { if (Array.isArray(d)) adv = d; else if (o) adv = o; },
+  getAdvertisingData: function (d, o) { return o.manufacturerData; }
 };
 if (typeof getTime === 'undefined') getTime = function () { return Date.now() / 1000; };
 var bytes = function (s) { var b = []; for (var i = 0; i < s.length; i++) b.push(s.charCodeAt(i)); return b; };
@@ -203,6 +204,33 @@ var r = link.round();
 link.stop();
 check('ble hears neighbours and advertises compactly', [link.id, r.value[0], r.value[1], ble.unpack(adv.manufacturerData.slice(1))[A.hash('x0')], adv.manufacturerData.length],
   [1, '2', 0.32, [1], 1 + 2 + 1]);
+
+// Messages over 23 bytes: chunks of whole entries, advertised in turn, merged by the receiver.
+var four = function () { return [nbr(1.5).sum(), nbr(2.5).sum(), nbr(3.5).sum(), nbr(4.5).sum()]; };
+var m4 = {};
+['x0', 'x1', 'x2', 'x3'].forEach(function (p, i) { m4[A.hash(p)] = [10 * (i + 1) + 0.5]; });
+var cs = ble.split(m4, 4), joined = {};
+cs.forEach(function (c) { var e = ble.unpack(c); for (var k in e) joined[k] = e[k]; });
+check('ble split: chunks of whole entries that fit', [cs.length, cs.every(function (c) { return c.length <= 22; }), A.encode(joined)], [2, true, A.encode(m4)]);
+var big = A.start(four, { target: 'ble', period: 1e6, scan: 1e6 });
+var chunk = function (round, c) {
+  onScan({ id: 'aa:bb:cc:dd:00:02 public', rssi: -50, manufacturer: 0x0590, manufacturerData: bytes(String.fromCharCode(78 | 128, round) + c) });
+};
+chunk(5, cs[0]);
+var r1 = big.round().value;
+chunk(5, cs[1]);
+var r2 = big.round().value;
+var m5 = {};
+m5[A.hash('x0')] = [11.5];
+chunk(6, ble.split(m5, 4)[0]); // round 6, first chunk only: x1..x3 stay from round 5
+var r3 = big.round().value;
+big.stop();
+check('ble chunks: merged per round, missing ones kept from the round before',
+  [r1, r2, r3, adv.length, adv[0].charCodeAt(0)], [[10.5, 20.5, 30.5, 0], [10.5, 20.5, 30.5, 40.5], [11.5, 20.5, 30.5, 40.5], 2, 78 | 128]);
+var chunkNet = sim.network(line(5).pos, 1.5, { codec: ble.sim });
+var bigProgram = function () { return [L.hopsTo(sense('source')), nbr(1.5).sum(), nbr(2.5).sum(), nbr(3.5).sum()]; };
+check('sim over BLE: a message over 23 bytes goes in chunks', [run(chunkNet, bigProgram, 10, src0), chunkNet.messages[2].length],
+  [run(line(5), bigProgram, 10, src0), 2]);
 
 // UDP over WiFi against a fake socket: hears a neighbour, ignores itself, broadcasts its message.
 var sent = null, onMsg = null;
